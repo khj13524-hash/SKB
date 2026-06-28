@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKB 제휴 가격 PnL 시뮬레이터</title>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --point: #3617CE;
+      --sub1: #6E78FF;
+      --sub2: #9BAAFF;
+      --sub3: #D2DBFF;
+      --panel-bg: #F5F5F6;
+      --title-main: #0D0D0D;
+      --title-sub: #404040;
+      --body-sub: #808080;
+      --label: #595959;
+      --success: #1D9E75;
+      --warning: #EF9F27;
+      --danger: #E24B4A;
+      --font: 'SKT Sans 본문체', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: var(--font); background: var(--bg); color: var(--title-sub); }
+    .page { max-width: 1320px; margin: 0 auto; padding: 32px 24px 48px; }
+    .page-label { display: inline-flex; align-items: center; font-size: 11px; color: #111; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
+    .page-title { margin: 0 0 8px; font-size: 28px; font-weight: 700; color: var(--title-main); }
+    .page-subtitle { margin: 0 0 22px; font-size: 13px; color: var(--title-sub); line-height: 1.6; }
+
+    .tabs { display: inline-flex; gap: 8px; margin-bottom: 22px; }
+    .tab-button { border: 1px solid rgba(54,23,206,.15); border-radius: 100px; padding: 10px 20px; background: rgba(54,23,206,.05); color: var(--label); font-size: 13px; cursor: pointer; transition: background .2s, color .2s; }
+    .tab-button.on { background: var(--point); color: #fff; border-color: var(--point); }
+
+    .panel { background: var(--panel-bg); border: 1px solid #E5E5E5; border-radius: 20px; padding: 28px; }
+    .section-title { margin: 0 0 14px; font-size: 16px; font-weight: 700; color: var(--point); }
+    .section-note  { margin: 0 0 22px; font-size: 12px; color: var(--body-sub); }
+
+    .step-section { margin-bottom: 28px; }
+    .step-section + .step-section { padding-top: 28px; border-top: 2px dashed rgba(54,23,206,.15); }
+    .step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .step-badge { display: inline-flex; align-items: center; padding: 4px 12px; background: var(--point); color: #fff; border-radius: 100px; font-size: 11px; font-weight: 700; }
+    .step-title { font-size: 15px; font-weight: 700; color: var(--title-main); }
+    .step-note  { font-size: 11px; color: var(--body-sub); }
+
+    /* ==================== Q 모수 모듈 ==================== */
+    .q-module-panel { margin-bottom: 24px; }
+    .q-module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .q-module-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; grid-column: 1 / -1; }
+    .q-module-derived { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; grid-column: 1 / -1; }
+    .q-module-note { grid-column: 1 / -1; }
+
+    .q-input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .q-input-card { background: #fff; border: 1px solid #E5E5E5; border-radius: 14px; padding: 14px 16px; }
+    .q-input-label { font-size: 11px; color: var(--body-sub); margin-bottom: 6px; white-space: nowrap; }
+    .q-input-field { width: 100%; border: none; outline: none; font-size: 18px; font-weight: 700; color: var(--title-main); font-family: var(--font); background: transparent; }
+    .q-input-unit { font-size: 11px; color: var(--body-sub); margin-top: 4px; }
+
+    .q-slider-group { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+    .q-slider-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .q-slider-label { font-size: 13px; font-weight: 700; color: var(--title-main); }
+    .q-slider-value { font-size: 22px; font-weight: 700; color: var(--point); }
+    .q-slider-hint { display: flex; justify-content: space-between; font-size: 11px; color: var(--body-sub); }
+    .q-slider-desc { font-size: 11px; color: var(--body-sub); line-height: 1.5; }
+
+    .q-derived-group { display: flex; flex-direction: column; gap: 10px; }
+    .q-derived-card { border-radius: 12px; padding: 12px 16px; }
+    .q-derived-card.cp { background: rgba(54,23,206,.08); border: 1px solid rgba(54,23,206,.2); }
+    .q-derived-card.ai { background: rgba(29,158,117,.08); border: 1px solid rgba(29,158,117,.2); }
+    .q-derived-head { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    .q-derived-card.cp .q-derived-head { color: var(--point); }
+    .q-derived-card.ai .q-derived-head { color: var(--success); }
+    .q-derived-val { font-size: 22px; font-weight: 700; color: var(--title-main); }
+    .q-derived-formula { font-size: 11px; color: var(--body-sub); margin-top: 3px; }
+
+    /* Configurator */
+    .config-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start; }
+    .config-selectors { display: flex; flex-direction: column; gap: 20px; }
+    .selection-title { font-size: 13px; font-weight: 700; color: var(--title-main); margin: 0 0 10px; }
+    .button-grid { display: grid; gap: 8px; }
+    .option-button { padding: 11px 16px; border: 2px solid #E0E0E0; border-radius: 12px; background: #fff; color: var(--body-sub); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .18s; text-align: left; }
+    .option-button:hover  { border-color: var(--sub1); background: var(--sub3); color: var(--point); }
+    .option-button.active { border-color: var(--point); background: var(--point); color: #fff; }
+
+    .always-on-badge { display: flex; align-items: center; justify-content: space-between; background: rgba(29,158,117,.08); border: 1px solid rgba(29,158,117,.25); border-radius: 10px; padding: 9px 13px; margin-bottom: 10px; font-size: 12px; }
+    .always-on-left  { display: flex; align-items: center; gap: 6px; color: var(--success); font-weight: 600; }
+    .always-on-right { font-weight: 700; color: var(--success); }
+
+    .phone-cb-label { display: flex; align-items: flex-start; gap: 11px; border: 2px solid #E0E0E0; border-radius: 12px; padding: 13px 15px; cursor: pointer; background: #fff; transition: all .18s; }
+    .phone-cb-label:hover { border-color: var(--sub1); background: var(--sub3); }
+    .phone-cb-label:has(input:checked) { border-color: var(--point); background: var(--point); }
+    .phone-cb-label:has(input:checked) .cb-title { color: #fff; }
+    .phone-cb-label:has(input:checked) .cb-desc  { color: rgba(255,255,255,.75); }
+    .phone-cb-label input[type=checkbox] { accent-color: var(--point); width: 17px; height: 17px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+    .cb-title { font-size: 13px; font-weight: 600; color: var(--title-main); }
+    .cb-desc  { font-size: 11px; color: var(--body-sub); margin-top: 3px; }
+
+    .price-detail-card { display: flex; flex-direction: column; gap: 14px; }
+    .ps-box { background: var(--sub3); border: 1px solid rgba(54,23,206,.3); border-radius: 12px; padding: 16px 18px; }
+    .ps-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 10px; }
+    .ps-row:last-child { margin-bottom: 0; }
+    .ps-label { color: var(--body-sub); font-size: 12px; }
+    .ps-val { font-size: 18px; font-weight: 700; color: var(--title-main); }
+    .ps-val.delta-pos  { color: var(--danger); }
+    .ps-val.delta-zero { color: var(--title-main); }
+    .ps-val.delta-neg  { color: var(--success); }
+    .ps-divider { border: none; border-top: 1px solid rgba(54,23,206,.2); margin: 10px 0; }
+
+    .pack-info-card { background: var(--panel-bg); border: 1px solid #E5E5E5; border-radius: 12px; padding: 14px 16px; }
+    .pack-info-title { font-weight: 700; color: var(--title-main); margin: 0 0 5px; font-size: 13px; }
+    .pack-info-desc  { font-size: 12px; color: var(--body-sub); line-height: 1.5; margin: 0 0 10px; }
+    .pack-info-specs { border-top: 1px solid #E5E5E5; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .pack-spec-row   { display: flex; justify-content: space-between; font-size: 11px; }
+    .pack-spec-label { color: var(--body-sub); }
+    .pack-spec-val   { color: var(--title-sub); font-weight: 600; text-align: right; max-width: 60%; }
+
+    .comp-box { background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 12px; padding: 14px 16px; }
+    .comp-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 7px 0; border-bottom: 1px solid #E5E5E5; }
+    .comp-row:last-child { border-bottom: none; }
+    .comp-label { color: var(--body-sub); }
+    .comp-val   { font-weight: 700; color: var(--title-main); }
+    .comp-val.increased { color: var(--danger); }
+    .comp-row.final-row { padding-top: 12px; margin-top: 4px; border-top: 2px solid #D0D0D0; border-bottom: none; }
+    .comp-row.final-row .comp-label { font-weight: 700; color: var(--title-main); font-size: 13px; }
+    .comp-row.final-row .comp-val   { font-size: 16px; color: var(--point); }
+
+    .breakdown-wrap { margin-top: 20px; }
+    .breakdown-sublabel { font-size: 13px; font-weight: 700; color: var(--point); margin: 0 0 10px; }
+    .breakdown-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .breakdown-table th { background: var(--panel-bg); padding: 10px 12px; text-align: left; font-weight: 700; color: var(--title-main); border: 1px solid #E5E5E5; }
+    .breakdown-table th:last-child { text-align: right; }
+    .breakdown-table td { padding: 9px 12px; border: 1px solid #E5E5E5; }
+    .breakdown-table td.label-cell { background: var(--panel-bg); font-weight: 600; color: var(--title-main); }
+    .breakdown-table td.val-cell   { text-align: right; font-weight: 600; color: var(--title-sub); }
+    .breakdown-table td.neg   { color: var(--danger); }
+    .breakdown-table td.pos   { color: var(--success); }
+    .breakdown-table td.muted { color: var(--body-sub); }
+    .breakdown-table tr.final-row td { background: var(--sub3); color: var(--point); font-weight: 700; }
+
+    .confirmed-pq-box { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0; align-items: center; background: rgba(54,23,206,.06); border: 1px solid rgba(54,23,206,.2); border-radius: 12px; padding: 14px 18px; margin-bottom: 22px; }
+    .confirmed-item { display: flex; flex-direction: column; gap: 3px; }
+    .confirmed-divider { width: 1px; height: 48px; background: rgba(54,23,206,.2); margin: 0 18px; }
+    .confirmed-label { font-size: 11px; color: var(--point); font-weight: 700; }
+    .confirmed-value { font-size: 22px; font-weight: 700; color: var(--point); }
+    .confirmed-note  { font-size: 12px; color: var(--body-sub); margin-top: 4px; }
+    .confirmed-note strong { color: var(--point); }
+
+    .revenue-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 6px; }
+    .revenue-card { background: #fff; border-radius: 16px; border: 1px solid rgba(118,113,113,.12); padding: 18px; }
+    .revenue-card-label { font-size: 11px; color: var(--body-sub); margin-bottom: 6px; }
+    .revenue-card-value { font-size: 22px; font-weight: 700; color: var(--title-main); margin-bottom: 6px; }
+    .revenue-card-formula { font-size: 10px; color: var(--body-sub); font-family: monospace; line-height: 1.4; }
+    .revenue-card.accent { border-color: rgba(54,23,206,.2); background: rgba(54,23,206,.04); }
+    .revenue-card.accent .revenue-card-value { color: var(--point); }
+
+    .slider-group { display: grid; gap: 18px; margin-bottom: 26px; }
+    .slider-row   { display: grid; gap: 8px; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--label); }
+    .slider-range-hint { display: flex; justify-content: space-between; font-size: 11px; color: var(--body-sub); }
+    input[type=range] { width: 100%; accent-color: var(--point); }
+
+    .panel-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-bottom: 22px; }
+    .metric-card    { padding: 18px 18px 16px; border-radius: 16px; background: #fff; border: 1px solid rgba(118,113,113,.12); }
+    .metric-label   { display: block; font-size: 11px; color: var(--body-sub); margin-bottom: 8px; }
+    .metric-value   { font-size: 20px; font-weight: 700; color: var(--title-main); }
+    .metric-caption { margin-top: 8px; font-size: 11px; color: var(--body-sub); }
+
+    .body-panel { background: #fff; border-radius: 16px; border: 1px solid rgba(118,113,113,.12); padding: 22px; margin-bottom: 24px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; padding: 10px 0; border-bottom: 1px solid rgba(118,113,113,.12); }
+    .row:last-child { border-bottom: none; }
+    .row-label { color: var(--body-sub); }
+    .row-value { font-weight: 700; color: var(--title-main); }
+    .row-value.negative { color: var(--danger); }
+    .row-value.positive { color: var(--success); }
+    .row-value.neutral  { color: var(--title-main); }
+
+    .alert-box  { border-radius: 14px; padding: 16px 18px; font-size: 13px; line-height: 1.5; margin-bottom: 0; border: 1px solid transparent; }
+    .alert-ok   { background: rgba(29,158,117,.12); color: var(--success); border-color: rgba(29,158,117,.2); }
+    .alert-warn { background: rgba(239,159,39,.12);  color: var(--warning); border-color: rgba(239,159,39,.2); }
+    .alert-ng   { background: rgba(226,75,74,.12);   color: var(--danger);  border-color: rgba(226,75,74,.2); }
+
+    .chart-card    { padding: 18px; border-radius: 18px; background: #fff; border: 1px solid rgba(118,113,113,.12); }
+    .chart-caption { margin-top: 10px; font-size: 12px; color: var(--body-sub); }
+    canvas { width: 100% !important; height: 300px !important; }
+
+    .scheme-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 22px; }
+    .scheme-card  { border-radius: 18px; background: #fff; border: 1px solid rgba(118,113,113,.12); padding: 18px; min-height: 172px; display: flex; flex-direction: column; justify-content: space-between; }
+    .scheme-title { font-size: 13px; font-weight: 700; color: var(--title-main); margin-bottom: 8px; }
+    .scheme-meta  { font-size: 12px; color: var(--body-sub); line-height: 1.6; margin-bottom: 12px; }
+    .scheme-list  { display: grid; gap: 8px; margin-top: 8px; }
+    .scheme-item  { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--label); }
+    .scheme-pill  { display: inline-flex; align-items: center; padding: 3px 8px; background: var(--sub3); color: var(--point); border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .placeholder-card { border-radius: 18px; background: rgba(54,23,206,.05); border: 1px dashed rgba(54,23,206,.3); padding: 22px; color: var(--title-main); font-size: 13px; line-height: 1.7; }
+
+    /* ⓘ 툴팁 */
+    .info-btn { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: rgba(54,23,206,.12); color: var(--point); font-size: 10px; font-weight: 700; cursor: pointer; border: none; vertical-align: middle; margin-left: 5px; flex-shrink: 0; }
+    .info-btn:hover { background: rgba(54,23,206,.25); }
+    .info-popup-wrap { position: relative; display: inline-block; }
+    .info-popup { display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 999; background: #fff; border: 1px solid rgba(54,23,206,.2); border-radius: 14px; padding: 14px 16px; width: 280px; box-shadow: 0 4px 20px rgba(0,0,0,.12); font-size: 11px; color: var(--title-sub); line-height: 1.7; }
+    .info-popup.show { display: block; }
+    .info-popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .info-popup-title { font-size: 12px; font-weight: 700; color: var(--point); }
+    .info-popup-close { cursor: pointer; font-size: 14px; color: var(--body-sub); background: none; border: none; line-height: 1; padding: 0; }
+    .info-popup-step { display: flex; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(118,113,113,.1); }
+    .info-popup-step:last-child { border-bottom: none; }
+    .info-popup-arrow { color: var(--point); font-weight: 700; flex-shrink: 0; }
+    .info-popup-result { margin-top: 8px; padding: 7px 10px; background: rgba(54,23,206,.06); border-radius: 8px; font-weight: 700; color: var(--point); text-align: center; font-size: 12px; }
+
+    @media (max-width: 1100px) { .panel-grid { grid-template-columns: repeat(2,1fr); } .q-module-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px)  { .config-grid { grid-template-columns: 1fr; } .revenue-card-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 720px)  { .panel-grid { grid-template-columns: 1fr; } .q-input-group { grid-template-columns: 1fr; } .confirmed-pq-box { grid-template-columns: 1fr; } .confirmed-divider { display: none; } }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="page-label">SKB 제휴 BP 시뮬레이터</div>
+  <h1 class="page-title">쿠팡 / AI제휴 요금 PnL 시뮬레이터</h1>
+  <p class="page-subtitle">가입자 모수(Q)를 먼저 설정하고, TV 상품·콘텐츠팩 선택으로 고객 납부액(P)을 확정한 뒤, 도매 단가 슬라이더로 인당 마진과 월·연·3년 누적 수익 기여를 실시간으로 시뮬레이션합니다.</p>
+
+  <!-- ===== STEP 0: 가입자 모수 설정 ===== -->
+  <div class="panel q-module-panel">
+    <div class="step-header" style="margin-bottom:20px;">
+      <span class="step-badge">Step 0</span>
+      <span class="step-title">가입자 모수 설정</span>
+      <span class="step-note">슬라이더로 쿠팡·AI 제휴 월 전환 목표 인원을 설정하세요</span>
+    </div>
+    <div class="q-module-grid">
+
+      <!-- 슬라이더 2열 -->
+      <div class="q-module-sliders">
+        <div class="q-slider-group">
+          <div style="font-size:12px;font-weight:700;color:var(--title-main);margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+            쿠팡 제휴 목표 Q_cp
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-qcp')">i</button>
+              <div class="info-popup" id="tooltip-qcp">
+                <div class="info-popup-header">
+                  <span class="info-popup-title">Q_cp = 4,500명 산출 근거</span>
+                  <button class="info-popup-close" onclick="toggleQTooltip('tooltip-qcp')">×</button>
+                </div>
+                <div class="info-popup-step"><span class="info-popup-arrow">①</span><span>2030 쿠팡 고객 900만 명 × SKB MS 30% 가정 → <b>300만 명</b></span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">②</span><span>SKB 기존 가입자(약 240만) 제외 → <b>60만 명</b> (순 가용)</span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">③</span><span>60만 ÷ 2.2명<sup>*</sup> → <b>27만 명</b><br><span style="font-size:10px;color:var(--body-sub);">* 1가구당 평균 세대원 수</span></span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">④</span><span>약정 기간 60개월로 분산 → 27만 ÷ 60개월</span></div>
+                <div class="info-popup-result">≈ 월 4,500명 전환 목표</div>
+              </div>
+            </div>
+          </div>
+          <div class="q-slider-header">
+            <span class="q-slider-label">슬라이더로 조정</span>
+            <span class="q-slider-value" id="qcp-val-display">4,500명</span>
+          </div>
+          <input type="range" id="qcp-slider" min="0" max="10000" step="100" value="4500" oninput="updateQModule()">
+          <div class="q-slider-hint"><span>0명</span><span>10,000명</span></div>
+        </div>
+        <div class="q-slider-group">
+          <div style="font-size:12px;font-weight:700;color:var(--title-main);margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+            AI 제휴 목표 Q_ai
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-qai')">i</button>
+              <div class="info-popup" id="tooltip-qai">
+                <div class="info-popup-header">
+                  <span class="info-popup-title">Q_ai = 3,000명 산출 근거</span>
+                  <button class="info-popup-close" onclick="toggleQTooltip('tooltip-qai')">×</button>
+                </div>
+                <div class="info-popup-step"><span class="info-popup-arrow">①</span><span>AI 유경험·미구독(25%) × 2030 인터넷 이용자(2,200만 × 60%) → 약 <b>330만 명</b></span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">②</span><span>SKB 기존 가입자(약 240만) 제외 → <b>90만 명</b> (순 가용)</span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">③</span><span>90만 ÷ 2.2명<sup>*</sup> → <b>40만 명</b><br><span style="font-size:10px;color:var(--body-sub);">* 1가구당 평균 세대원 수</span></span></div>
+                <div class="info-popup-step"><span class="info-popup-arrow">④</span><span>약정 기간 60개월로 분산 × 유료전환율 40% 적용</span></div>
+                <div class="info-popup-result">≈ 월 3,000명 전환 목표</div>
+              </div>
+            </div>
+          </div>
+          <div class="q-slider-header">
+            <span class="q-slider-label">슬라이더로 조정</span>
+            <span class="q-slider-value" id="qai-val-display">3,000명</span>
+          </div>
+          <input type="range" id="qai-slider" min="0" max="10000" step="100" value="3000" oninput="updateQModule()">
+          <div class="q-slider-hint"><span>0명</span><span>10,000명</span></div>
+        </div>
+      </div>
+
+      <!-- 파생 모수 2열 -->
+      <div class="q-module-derived">
+        <div class="q-derived-card cp">
+          <div class="q-derived-head">쿠팡 제휴 Q_cp</div>
+          <div class="q-derived-val" id="q-cp-display">4,500명</div>
+          <div class="q-derived-formula" id="q-cp-formula">슬라이더 직접 설정</div>
+        </div>
+        <div class="q-derived-card ai">
+          <div class="q-derived-head">AI 제휴 Q_ai</div>
+          <div class="q-derived-val" id="q-ai-display">3,000명</div>
+          <div class="q-derived-formula" id="q-ai-formula">슬라이더 직접 설정</div>
+        </div>
+      </div>
+
+      <!-- 참고 텍스트 -->
+      <p class="q-module-note" style="font-size:11px;color:var(--body-sub);margin:0;line-height:1.6;">
+        (참고) SKB 월 신규 가입자 — 인터넷 72,970명 / IPTV 71,179명 (1월은 프로모션으로 인한 가입자 급증으로 제외)
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ===== 누적 수익 기여 (탭 위) ===== -->
+  <div class="panel" style="margin-bottom:22px;">
+
+    <!-- 쿠팡 수익 섹션 -->
+    <div id="rev-section-cp">
+      <div class="section-title" style="margin-bottom:8px;">누적 수익 기여</div>
+      <p style="font-size:12px;color:var(--body-sub);margin:0 0 16px;">매월 Q_cp명씩 신규 전환, 계약 유지율 적용 · P = 인당 순마진 기준</p>
+      <div class="revenue-card-grid">
+        <div class="revenue-card">
+          <div class="revenue-card-label">월 순마진 기여</div>
+          <div class="revenue-card-value" id="rev-monthly">-</div>
+          <div class="revenue-card-formula">P × Q / 2</div>
+        </div>
+        <div class="revenue-card">
+          <div class="revenue-card-label" style="display:flex;align-items:center;gap:4px;">
+            연 누적 기여 (유지율 90%)
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-ret-annual-cp')">i</button>
+              <div class="info-popup" id="tooltip-ret-annual-cp">
+                <div style="font-size:12px;color:var(--title-sub);padding:4px 2px;">월 해지율 1% 가정시</div>
+              </div>
+            </div>
+          </div>
+          <div class="revenue-card-value" id="rev-annual">-</div>
+          <div class="revenue-card-formula">P × Q × 12 × (13/2) × 0.9</div>
+        </div>
+        <div class="revenue-card accent">
+          <div class="revenue-card-label" style="display:flex;align-items:center;gap:4px;">
+            3년 누적 기여 (유지율 70%)
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-ret-3yr-cp')">i</button>
+              <div class="info-popup" id="tooltip-ret-3yr-cp">
+                <div style="font-size:12px;color:var(--title-sub);padding:4px 2px;">월 해지율 1% 가정시</div>
+              </div>
+            </div>
+          </div>
+          <div class="revenue-card-value" id="rev-3year">-</div>
+          <div class="revenue-card-formula">P × Q × 36 × (37/2) × 0.7</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--body-sub);margin:12px 0 0;padding:10px 12px;background:rgba(118,113,113,.06);border-radius:8px;line-height:1.6;">
+        ※ 본 시뮬레이터는 제휴 서비스 인당 순마진 기준 수익 기여로 산정하였습니다. 기본료 매출 증분은 가입자 증분(Q)이 추정치임에 따라 별도 산정하지 않았습니다.
+      </p>
+    </div>
+
+    <!-- AI 수익 섹션 -->
+    <div id="rev-section-ai" style="display:none;">
+      <div class="section-title" style="margin-bottom:8px;">누적 수익 기여</div>
+      <p style="font-size:12px;color:var(--body-sub);margin:0 0 16px;">매월 Q_ai명씩 신규 전환, 계약 유지율 적용 · P = 인당 순마진 기준</p>
+      <div class="revenue-card-grid">
+        <div class="revenue-card">
+          <div class="revenue-card-label">월 순마진 기여</div>
+          <div class="revenue-card-value" id="ai-rev-monthly">-</div>
+          <div class="revenue-card-formula">P × Q / 2</div>
+        </div>
+        <div class="revenue-card">
+          <div class="revenue-card-label" style="display:flex;align-items:center;gap:4px;">
+            연 누적 기여 (유지율 90%)
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-ret-annual-ai')">i</button>
+              <div class="info-popup" id="tooltip-ret-annual-ai">
+                <div style="font-size:12px;color:var(--title-sub);padding:4px 2px;">월 해지율 1% 가정시</div>
+              </div>
+            </div>
+          </div>
+          <div class="revenue-card-value" id="ai-rev-annual">-</div>
+          <div class="revenue-card-formula">P × Q × 12 × (13/2) × 0.9</div>
+        </div>
+        <div class="revenue-card accent">
+          <div class="revenue-card-label" style="display:flex;align-items:center;gap:4px;">
+            3년 누적 기여 (유지율 70%)
+            <div class="info-popup-wrap">
+              <button class="info-btn" onclick="toggleQTooltip('tooltip-ret-3yr-ai')">i</button>
+              <div class="info-popup" id="tooltip-ret-3yr-ai">
+                <div style="font-size:12px;color:var(--title-sub);padding:4px 2px;">월 해지율 1% 가정시</div>
+              </div>
+            </div>
+          </div>
+          <div class="revenue-card-value" id="ai-rev-3year">-</div>
+          <div class="revenue-card-formula">P × Q × 36 × (37/2) × 0.7</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--body-sub);margin:12px 0 0;padding:10px 12px;background:rgba(118,113,113,.06);border-radius:8px;line-height:1.6;">
+        ※ 본 시뮬레이터는 제휴 서비스 인당 순마진 기준 수익 기여로 산정하였습니다. 기본료 매출 증분은 가입자 증분(Q)이 추정치임에 따라 별도 산정하지 않았습니다.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ===== TABS ===== -->
+  <div class="tabs">
+    <button class="tab-button on" id="tab-cp" onclick="setTab('cp')">쿠팡 제휴</button>
+    <button class="tab-button" id="tab-ai" onclick="setTab('ai')">AI제휴</button>
+  </div>
+
+  <!-- ===== 쿠팡 제휴 ===== -->
+  <div class="panel" id="panel-cp">
+    <div class="section-title">쿠팡 제휴</div>
+    <p class="section-note">1단계에서 TV 상품·콘텐츠팩을 선택하면 고객 납부액이 확정되고, 2단계에서 도매 단가와 모수 Q로 누적 수익성을 시뮬레이션합니다.</p>
+
+    <!-- STEP 1: 상품 구성 선택 -->
+    <div class="step-section">
+      <div class="step-header">
+        <span class="step-badge">Step 1</span>
+        <span class="step-title">상품 구성 선택</span>
+        <span class="step-note">인터넷은 기가(1G)로 고정 · TV 상품과 콘텐츠팩을 선택하세요</span>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-selectors">
+
+          <!-- TV 상품 선택 -->
+          <div>
+            <div class="selection-title">TV 상품 <span style="font-weight:400;font-size:11px;color:var(--body-sub)">기가 인터넷(1G) 고정</span></div>
+            <div class="button-grid">
+              <button class="option-button active" id="tv-standard" onclick="selectTV('standard')">
+                B tv 스탠다드 <span style="font-size:11px;opacity:.7">무약정 101,200원</span>
+              </button>
+              <button class="option-button" id="tv-all" onclick="selectTV('all')">
+                B tv All <span style="font-size:11px;opacity:.7">무약정 104,500원</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 콘텐츠팩 -->
+          <div>
+            <div class="selection-title">콘텐츠팩</div>
+            <div class="button-grid">
+              <button class="option-button active" id="pack-wowpass" onclick="selectContentPack('wowpass')">
+                쿠팡 와우멤버십 팩 <span style="font-size:11px;opacity:.7">7,890원</span>
+              </button>
+              <button class="option-button" id="pack-sportspass" onclick="selectContentPack('sportspass')">
+                스포츠 패스 팩 <span style="font-size:11px;opacity:.7">20,290원 (와우+스포츠패스)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 휴대폰 결합 -->
+          <div>
+            <div class="selection-title">휴대폰 결합 여부</div>
+            <div class="always-on-badge">
+              <div class="always-on-left">
+                <span>✓</span>
+                <span>인터넷 + B tv 결합할인 &nbsp;항상 적용</span>
+              </div>
+              <div class="always-on-right">-2,200원</div>
+            </div>
+            <label class="phone-cb-label" for="phone-bundled-cb">
+              <input type="checkbox" id="phone-bundled-cb" checked onchange="setPhoneBundle(this.checked)">
+              <div>
+                <div class="cb-title">휴대폰 결합 추가 (유무선 결합)</div>
+                <div class="cb-desc">휴대폰요금할인 -14,300원 추가 적용</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 우측 요금 상세 -->
+        <div class="price-detail-card">
+          <div class="ps-box">
+            <div class="ps-row">
+              <span class="ps-label">기본요금 (팩 미선택, 현재 결합 기준)</span>
+              <span class="ps-val" id="cp-ref-price">45,100원</span>
+            </div>
+            <div class="ps-row">
+              <span class="ps-label">선택 상품 월요금</span>
+              <span class="ps-val" id="cp-selected-price">51,890원</span>
+            </div>
+            <hr class="ps-divider">
+            <div class="ps-row">
+              <span class="ps-label">월 추가 비용</span>
+              <span class="ps-val" id="cp-delta-price">+6,790원</span>
+            </div>
+          </div>
+
+          <div class="pack-info-card">
+            <div class="pack-info-title" id="cp-pack-name">쿠팡 와우멤버십 팩</div>
+            <p class="pack-info-desc" id="cp-pack-desc">쿠팡 와우 멤버십 하나로 쇼핑·배달·OTT 혜택을 묶은 상품입니다.</p>
+            <div class="pack-info-specs">
+              <div class="pack-spec-row">
+                <span class="pack-spec-label">포함 서비스</span>
+                <span class="pack-spec-val" id="cp-pack-service">쿠팡 와우멤버십 (월 자동 갱신)</span>
+              </div>
+              <div class="pack-spec-row">
+                <span class="pack-spec-label">타겟 고객</span>
+                <span class="pack-spec-val" id="cp-pack-target">2030 1인 가구, 쇼핑·OTT 중심</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="comp-box">
+            <div class="comp-row">
+              <span class="comp-label">기본 월요금 (팩 미포함, 현재 결합 기준)</span>
+              <span class="comp-val" id="cp-comp-base">45,100원</span>
+            </div>
+            <div class="comp-row">
+              <span class="comp-label">콘텐츠팩 추가</span>
+              <span class="comp-val" id="cp-comp-pack">+7,890원</span>
+            </div>
+            <div class="comp-row">
+              <span class="comp-label">제휴 할인</span>
+              <span class="comp-val" id="cp-comp-discount">-1,100원</span>
+            </div>
+            <div class="comp-row final-row">
+              <span class="comp-label">최종 월요금</span>
+              <span class="comp-val" id="cp-comp-final">51,890원</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 요금 분해 테이블 -->
+      <div class="breakdown-wrap">
+        <div class="breakdown-sublabel">요금 분해</div>
+        <table class="breakdown-table">
+          <thead><tr><th>구분</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="label-cell">무약정 요금</td>
+              <td class="val-cell" id="bt-list">101,200원</td>
+            </tr>
+            <tr>
+              <td class="label-cell">3년 약정 할인 (서비스+셋톱)</td>
+              <td class="val-cell neg">-37,400원</td>
+            </tr>
+            <tr>
+              <td class="label-cell">AI5 케어 먼저드림 할인</td>
+              <td class="val-cell neg">-2,200원</td>
+            </tr>
+            <tr>
+              <td class="label-cell">인터넷 + B tv 결합할인 <span style="font-size:10px;font-weight:400;color:var(--success)">(항상 적용)</span></td>
+              <td class="val-cell neg">-2,200원</td>
+            </tr>
+            <tr>
+              <td class="label-cell">휴대폰요금할인</td>
+              <td class="val-cell" id="bt-bundled">-14,300원</td>
+            </tr>
+            <tr>
+              <td class="label-cell" id="bt-pack-label">쿠팡 와우 멤버십</td>
+              <td class="val-cell pos" id="bt-pack-val">+7,890원</td>
+            </tr>
+            <tr>
+              <td class="label-cell">제휴 할인 금액</td>
+              <td class="val-cell neg" id="bt-alliance">-1,100원</td>
+            </tr>
+            <tr class="final-row">
+              <td class="label-cell">최종 월 납부액</td>
+              <td class="val-cell" id="bt-final">51,890원</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STEP 2: PnL 시뮬레이션 -->
+    <div class="step-section">
+      <div class="step-header">
+        <span class="step-badge">Step 2</span>
+        <span class="step-title">PnL 시뮬레이션</span>
+        <span class="step-note">Step 0의 Q와 Step 1의 P가 자동 반영됩니다</span>
+      </div>
+
+      <!-- P × Q 확정 박스 -->
+      <div class="confirmed-pq-box">
+        <div class="confirmed-item">
+          <span class="confirmed-label">고객 납부액 P (확정)</span>
+          <span class="confirmed-value" id="cp-sim-price">51,890원</span>
+          <span class="confirmed-note">인당 팩 프리미엄 <strong id="cp-pack-premium">+6,790원</strong></span>
+        </div>
+        <div class="confirmed-divider"></div>
+        <div class="confirmed-item">
+          <span class="confirmed-label">쿠팡 제휴 모수 Q_cp (월 전환)</span>
+          <span class="confirmed-value" id="cp-q-display">11,764명</span>
+          <span class="confirmed-note">Step 0 B 슬라이더 조정으로 변경</span>
+        </div>
+      </div>
+
+      <!-- 도매단가 슬라이더 -->
+      <div class="slider-group">
+        <div class="slider-row">
+          <div class="slider-label">
+            <span>콘텐츠팩 도매 단가 (협상가)</span>
+            <strong id="cp-wholesale-value">5,800원</strong>
+          </div>
+          <input type="range" id="cp-wholesale" min="0" max="7890" step="100" value="5800" oninput="calcCoupang()">
+          <div class="slider-range-hint">
+            <span id="cp-slider-min-label">0원 (무상 공급)</span>
+            <span id="cp-slider-max-label">7,890원 (소비자가)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 인당 지표 -->
+      <div class="body-panel">
+        <div class="section-title">인당 지표</div>
+        <div class="panel-grid">
+          <div class="metric-card">
+            <span class="metric-label">인당 팩 프리미엄</span>
+            <span class="metric-value" id="cp-extra">-</span>
+            <div class="metric-caption">팩 소비자가 − 제휴 할인</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">인당 순마진 (P)</span>
+            <span class="metric-value" id="cp-margin">-</span>
+            <div class="metric-caption">팩 프리미엄 − 도매비</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">도매 단가 (협상가)</span>
+            <span class="metric-value" id="cp-wholesale-metric">-</span>
+            <div class="metric-caption">콘텐츠팩 도매 비용</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">월 매출</span>
+            <span class="metric-value" id="cp-annual">-</span>
+            <div class="metric-caption">최종 월 요금 × Q / 2</div>
+          </div>
+        </div>
+        <div class="alert-box" id="cp-alert"></div>
+      </div>
+
+      <!-- 마진 구조 분해 -->
+      <div class="body-panel">
+        <div class="section-title">마진 구조 분해</div>
+        <div class="row"><span class="row-label">기준 납부액 (팩 미포함, 현재 결합 기준)</span><span class="row-value" id="bd-baseline">45,100원</span></div>
+        <div class="row"><span class="row-label">콘텐츠팩 소비자가</span><span class="row-value" id="bd-pack-value">+7,890원</span></div>
+        <div class="row"><span class="row-label">제휴 할인 금액</span><span class="row-value negative" id="bd-pack-discount">-1,100원</span></div>
+        <div class="row"><span class="row-label">최종 고객 납부액</span><span class="row-value" id="bd-final">51,890원</span></div>
+        <div class="row"><span class="row-label">도매 비용 차감 (협상가)</span><span class="row-value negative" id="bd-wholesale">-5,800원</span></div>
+        <div class="row"><span class="row-label">인당 순마진</span><span class="row-value positive" id="bd-margin">+990원</span></div>
+      </div>
+
+      <!-- 차트 -->
+      <div class="body-panel">
+        <div class="section-title">도매 단가 시나리오별 인당 마진</div>
+        <div class="chart-card"><canvas id="cp-chart"></canvas></div>
+        <p class="chart-caption">현재 도매 단가 위치는 막대 라벨에서 '← 현재'로 표시됩니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AI제휴 ===== -->
+  <div class="panel" id="panel-ai" style="display:none;">
+    <div class="section-title">AI제휴</div>
+    <p class="section-note">1단계에서 AI 구독 서비스를 선택하면 고객 납부액이 확정되고, 2단계에서 도매 비용과 모수 Q로 누적 수익성을 시뮬레이션합니다.</p>
+
+    <!-- STEP 1: AI 상품 구성 선택 -->
+    <div class="step-section">
+      <div class="step-header">
+        <span class="step-badge">Step 1</span>
+        <span class="step-title">AI 상품 구성 선택</span>
+        <span class="step-note">AI 구독 1개 이상 선택 · 2개 이상 시 (결합 할인) 인터넷 + AI 결합 자동 적용</span>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-selectors">
+
+          <!-- 인터넷 기본 -->
+          <div>
+            <div class="selection-title">인터넷 기본 <span id="ai-base-internet-note" style="font-weight:400;font-size:11px;color:var(--body-sub)">1년약정 · 2030다이렉트 기준</span></div>
+            <div class="always-on-badge">
+              <div class="always-on-left"><span>✓</span><span>기가 인터넷 + GIGA WIFI 7 &nbsp;항상 적용</span></div>
+              <div class="always-on-right" id="ai-base-internet-badge">34,100원</div>
+            </div>
+          </div>
+
+          <!-- Phase 선택 -->
+          <div>
+            <div class="selection-title">상품 구성 단계</div>
+            <div class="button-grid" style="grid-template-columns:1fr 1fr;">
+              <button class="option-button active" id="ai-phase-1" onclick="selectAIPhase('1')">
+                Phase 1 <span style="font-size:11px;opacity:.7">고정 2종</span>
+              </button>
+              <button class="option-button" id="ai-phase-2" onclick="selectAIPhase('2')">
+                Phase 2 <span style="font-size:11px;opacity:.7">선택형</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Phase 1: Google AI Pro + Canva (고정) -->
+          <div id="ai-phase1-content">
+            <div class="selection-title">AI 구독 구성 <span style="font-weight:400;font-size:11px;color:var(--body-sub)">2종 필수 포함 · 소비자가 50% 할인</span></div>
+            <div class="always-on-badge">
+              <div class="always-on-left"><span>✓</span><span>Google AI Pro &nbsp;<span style="font-weight:400;opacity:.75">29,000원 → 14,500원</span></span></div>
+              <div class="always-on-right">14,500원</div>
+            </div>
+            <div class="always-on-badge" style="margin-top:8px;">
+              <div class="always-on-left"><span>✓</span><span>Canva &nbsp;<span style="font-weight:400;opacity:.75">9,900원 → 4,950원</span></span></div>
+              <div class="always-on-right">4,950원</div>
+            </div>
+            <div class="always-on-badge" style="margin-top:8px;">
+              <div class="always-on-left"><span>✓</span><span>(결합 할인) 인터넷 + AI 결합 &nbsp;<span style="font-weight:400;opacity:.75">(2종 자동 적용)</span></span></div>
+              <div class="always-on-right">-2,200원</div>
+            </div>
+          </div>
+
+          <!-- Phase 2: Google AI Pro / Claude (1개 이상 선택) -->
+          <div id="ai-phase2-content" style="display:none;">
+            <div class="selection-title">AI 구독 선택 <span style="font-weight:400;font-size:11px;color:var(--body-sub)">소비자가 50% 할인 · 2개 선택 시 결합 할인</span></div>
+            <label class="phone-cb-label" for="ai-p2-google">
+              <input type="checkbox" id="ai-p2-google" checked onchange="toggleAIP2('google', this.checked)">
+              <div><div class="cb-title">Google AI Pro</div><div class="cb-desc">소비자가 29,000원 → 고객 14,500원 (50% 할인)</div></div>
+            </label>
+            <label class="phone-cb-label" for="ai-p2-claude" style="margin-top:8px;">
+              <input type="checkbox" id="ai-p2-claude" onchange="toggleAIP2('claude', this.checked)">
+              <div><div class="cb-title">Claude</div><div class="cb-desc">소비자가 29,000원 → 고객 14,500원 (50% 할인)</div></div>
+            </label>
+            <div class="always-on-badge" id="ai-p2-bundle-badge" style="margin-top:12px;opacity:0.4;">
+              <div class="always-on-left"><span id="ai-p2-bundle-icon">○</span><span>2개 선택 시 (결합 할인) 인터넷 + AI 결합 자동 적용</span></div>
+              <div class="always-on-right">-2,200원</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 우측 요금 상세 -->
+        <div class="price-detail-card">
+          <div class="ps-box">
+            <div class="ps-row">
+              <span class="ps-label" id="ai-base-price-label">기본요금 (인터넷+WIFI, 1년약정)</span>
+              <span class="ps-val" id="ai-base-price-ps">34,100원</span>
+            </div>
+            <div class="ps-row">
+              <span class="ps-label">선택 AI 구독 합계</span>
+              <span class="ps-val" id="ai-selected-sum">14,500원</span>
+            </div>
+            <div class="ps-row" id="ai-bundle-row" style="display:none;">
+              <span class="ps-label">(결합 할인) 인터넷 + AI 결합</span>
+              <span class="ps-val" style="color:var(--danger);">-2,200원</span>
+            </div>
+            <hr class="ps-divider">
+            <div class="ps-row">
+              <span class="ps-label">총 고객 납부액</span>
+              <span class="ps-val" id="ai-total-price">42,000원</span>
+            </div>
+          </div>
+          <div class="pack-info-card">
+            <div class="pack-info-title">선택된 AI 구독 구성</div>
+            <div class="pack-info-specs" id="ai-selected-list"></div>
+          </div>
+          <div class="comp-box" id="ai-comp-box"></div>
+          <div id="ai-discount-note" style="background:rgba(54,23,206,.05);border:1px solid rgba(54,23,206,.15);border-radius:10px;padding:10px 13px;font-size:11px;color:var(--body-sub);line-height:1.7;"></div>
+        </div>
+      </div>
+
+      <!-- 요금 분해 테이블 -->
+      <div class="breakdown-wrap">
+        <div class="breakdown-sublabel">요금 분해</div>
+        <table class="breakdown-table">
+          <thead><tr><th>구분</th><th>금액</th></tr></thead>
+          <tbody id="ai-breakdown-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STEP 2: PnL 시뮬레이션 -->
+    <div class="step-section">
+      <div class="step-header">
+        <span class="step-badge">Step 2</span>
+        <span class="step-title">PnL 시뮬레이션</span>
+        <span class="step-note">Step 0의 Q와 Step 1의 P가 자동 반영됩니다</span>
+      </div>
+
+      <!-- P × Q 확정 박스 -->
+      <div class="confirmed-pq-box">
+        <div class="confirmed-item">
+          <span class="confirmed-label">AI 팩 프리미엄 P (확정)</span>
+          <span class="confirmed-value" id="ai-sim-premium">14,500원</span>
+          <span class="confirmed-note">인터넷 기본료 제외 · AI 구독 순 추가 납부액</span>
+        </div>
+        <div class="confirmed-divider"></div>
+        <div class="confirmed-item">
+          <span class="confirmed-label">AI 제휴 모수 Q_ai (월 전환)</span>
+          <span class="confirmed-value" id="ai-q-display">6,595명</span>
+          <span class="confirmed-note">Step 0 B 슬라이더 조정으로 변경</span>
+        </div>
+      </div>
+
+      <!-- 도매 비용 슬라이더 -->
+      <div class="slider-group">
+        <div class="slider-row">
+          <div class="slider-label">
+            <span>AI 구독 도매 비용 합계 (협상가)</span>
+            <strong id="ai-wholesale-value">13,510원</strong>
+          </div>
+          <input type="range" id="ai-wholesale" min="0" max="14500" step="100" value="13510" oninput="calcAI()">
+          <div class="slider-range-hint">
+            <span id="ai-slider-min-label">0원 (무상 공급)</span>
+            <span id="ai-slider-max-label">14,500원 (고객 납부액 기준)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 인당 지표 -->
+      <div class="body-panel">
+        <div class="section-title">인당 지표</div>
+        <div class="panel-grid">
+          <div class="metric-card">
+            <span class="metric-label">인당 AI 팩 프리미엄</span>
+            <span class="metric-value" id="ai-extra">-</span>
+            <div class="metric-caption">AI 구독 고객 납부액 (결합할인 포함)</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">인당 순마진 (P)</span>
+            <span class="metric-value" id="ai-margin">-</span>
+            <div class="metric-caption">팩 프리미엄 − 도매비</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">도매 비용 합계 (협상가)</span>
+            <span class="metric-value" id="ai-wholesale-metric">-</span>
+            <div class="metric-caption">AI 구독 도매 비용</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">월 매출</span>
+            <span class="metric-value" id="ai-annual">-</span>
+            <div class="metric-caption">최종 월 요금 × Q / 2</div>
+          </div>
+        </div>
+        <div class="alert-box" id="ai-alert"></div>
+      </div>
+
+      <!-- 마진 구조 분해 -->
+      <div class="body-panel">
+        <div class="section-title">마진 구조 분해</div>
+        <div id="ai-margin-breakdown"></div>
+      </div>
+
+      <!-- 차트 -->
+      <div class="body-panel">
+        <div class="section-title">도매 비용 시나리오별 인당 마진</div>
+        <div class="chart-card"><canvas id="ai-chart"></canvas></div>
+        <p class="chart-caption">현재 도매 비용 위치는 막대 라벨에서 '← 현재'로 표시됩니다.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // ===================== PRICING =====================
+  const PRICING = {
+    listPrice:         { standard: 101200, all: 104500 },
+    threeYearDiscount: 37400,
+    ai5Discount:       2200,
+    wireDiscount:      2200,
+    bundledDiscount:   14300,
+    basePrice:         { standard: 45100, all: 48400 },
+    contentPacks: {
+      wowpass: {
+        value:    7890,
+        discount: { standard: 1100, all: 2200 },
+        name:     '쿠팡 와우멤버십 팩',
+        desc:     '쿠팡 와우 멤버십 하나로 쇼핑·배달·OTT 혜택을 묶은 상품입니다.',
+        service:  '쿠팡 와우멤버십 (월 자동 갱신)',
+        target:   '2030 1인 가구, 쇼핑·OTT 중심',
+        packLabel:'쿠팡 와우 멤버십',
+        retailPrice:   7890,
+        sliderMin:     0,
+        sliderStep:    100,
+        scenarios: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 7890]
+      },
+      sportspass: {
+        value:    20290,
+        discount: { standard: 2200, all: 3300 },
+        name:     '스포츠 패스 팩',
+        desc:     '쿠팡 와우 멤버십(7,890원)과 스포츠 패스(12,400원)를 함께 제공하는 상품입니다.',
+        service:  '쿠팡 와우멤버십 + 스포츠 패스',
+        target:   '2030 남성, TV 스포츠 시청 헤비 유저',
+        packLabel:'스포츠 패스 팩',
+        retailPrice:   20290,
+        sliderMin:     5000,
+        sliderStep:    100,
+        scenarios: [5000, 7500, 10000, 12500, 15000, 17500, 20290]
+      }
+    }
+  };
+
+  // ===================== AI PRICING =====================
+  const AI_PRODS = {
+    googleAiPro: { name: 'Google AI Pro', retailPrice: 29000, customerPrice: 14500 },
+    rwtn:        { name: 'Canva',           retailPrice:  9900, customerPrice:  4950 },
+    claude:      { name: 'Claude',         retailPrice: 29000, customerPrice: 14500 }
+  };
+  const AI_BASE_PRICE_P1 = 34100;  // Phase 1: 1년약정 (2030다이렉트 기준)
+  const AI_BASE_PRICE_P2 = 27500;  // Phase 2: 3년약정
+  const AI_BUNDLE_DISC   = 2200;   // (결합 할인) 인터넷 + AI 결합 (AI 2개 이상 선택 시)
+
+  function getAiBasePrice() {
+    return aiState.phase === '1' ? AI_BASE_PRICE_P1 : AI_BASE_PRICE_P2;
+  }
+
+  // ===================== STATE =====================
+  let cpState = { tv: 'standard', contentPack: 'wowpass', phoneBundle: true };
+  let qState  = { a1: 72970, a2: 71179, qCp: 4500, qAi: 3000 };
+  let aiState = { phase: '1', p2Google: true, p2Claude: false };
+
+  let cpChartInst = null;
+  let aiChartInst = null;
+
+  // ===================== UTILS =====================
+  function fmt(v)     { return v.toLocaleString('ko-KR') + '원'; }
+  function fmtSign(v) { return (v >= 0 ? '+' : '-') + Math.abs(v).toLocaleString('ko-KR') + '원'; }
+  function fmtMag(v) {
+    const a = Math.abs(Math.round(v)), s = v < 0 ? '-' : '';
+    if (a >= 100000000) return s + (Math.round(a / 10000000) / 10).toLocaleString('ko-KR') + '억원';
+    if (a >= 10000)     return s + Math.round(a / 10000).toLocaleString('ko-KR') + '만원';
+    return s + a.toLocaleString('ko-KR') + '원';
+  }
+  function fmtQ(n) { return n.toLocaleString('ko-KR') + '명'; }
+
+  // ===================== REVENUE FORMULA =====================
+  function calcRevenueForms(margin, q) {
+    return {
+      monthly: margin * q / 2,
+      annual:  margin * q * 12 * (13 / 2) * 0.9,
+      threeYr: margin * q * 36 * (37 / 2) * 0.7
+    };
+  }
+
+  // ===================== TABS =====================
+  function setTab(tab) {
+    const cp = tab === 'cp';
+    document.getElementById('panel-cp').style.display         = cp ? '' : 'none';
+    document.getElementById('panel-ai').style.display         = cp ? 'none' : '';
+    document.getElementById('tab-cp').className               = cp ? 'tab-button on' : 'tab-button';
+    document.getElementById('tab-ai').className               = cp ? 'tab-button' : 'tab-button on';
+    document.getElementById('rev-section-cp').style.display   = cp ? '' : 'none';
+    document.getElementById('rev-section-ai').style.display   = cp ? 'none' : '';
+    if (!cp) calcAI();
+  }
+
+  // ===================== Q INPUT HELPERS =====================
+  function parseRaw(str) { return Math.max(0, parseInt(String(str).replace(/[^0-9]/g, ''), 10) || 0); }
+  function onQInput(el, field) {
+    qState[field] = parseRaw(el.value);
+    updateQModule();
+  }
+  function onQBlur(el, field) {
+    el.value = qState[field].toLocaleString('ko-KR');
+  }
+
+  // ===================== Q MODULE =====================
+  function updateQModule() {
+    qState.qCp = parseInt(document.getElementById('qcp-slider').value) || 0;
+    qState.qAi = parseInt(document.getElementById('qai-slider').value) || 0;
+
+    document.getElementById('qcp-val-display').textContent = qState.qCp.toLocaleString('ko-KR') + '명';
+    document.getElementById('qai-val-display').textContent = qState.qAi.toLocaleString('ko-KR') + '명';
+    document.getElementById('q-cp-display').textContent    = fmtQ(qState.qCp);
+    document.getElementById('q-ai-display').textContent    = fmtQ(qState.qAi);
+
+    calcCoupang();
+    calcAI();
+  }
+
+  function getQcp() { return qState.qCp; }
+  function getQai() { return qState.qAi; }
+
+  function toggleQTooltip(id) {
+    const el = document.getElementById(id);
+    const isOpen = el.classList.contains('show');
+    document.querySelectorAll('.info-popup').forEach(p => p.classList.remove('show'));
+    if (!isOpen) el.classList.add('show');
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.info-popup-wrap')) {
+      document.querySelectorAll('.info-popup').forEach(p => p.classList.remove('show'));
+    }
+  });
+
+  // ===================== 쿠팡: 상품 선택 =====================
+  function selectTV(type) {
+    cpState.tv = type;
+    ['standard', 'all'].forEach(k => document.getElementById('tv-' + k).classList.toggle('active', k === type));
+    setInitialSlider(cpState.contentPack);
+    updateCoupangConfig();
+  }
+
+  function selectContentPack(pack) {
+    cpState.contentPack = pack;
+    ['wowpass', 'sportspass'].forEach(k => document.getElementById('pack-' + k).classList.toggle('active', k === pack));
+    setInitialSlider(pack);
+    updateCoupangConfig();
+  }
+
+  function setPhoneBundle(checked) {
+    cpState.phoneBundle = checked;
+    updateCoupangConfig();
+  }
+
+  function applySliderConfig(pack) {
+    const cfg    = PRICING.contentPacks[pack];
+    const slider = document.getElementById('cp-wholesale');
+    const cur    = parseInt(slider.value, 10) || 0;
+    slider.min  = cfg.sliderMin;
+    slider.max  = cfg.retailPrice;
+    slider.step = cfg.sliderStep;
+    if (cur < cfg.sliderMin)   slider.value = cfg.sliderMin;
+    if (cur > cfg.retailPrice) slider.value = cfg.retailPrice;
+    document.getElementById('cp-slider-min-label').textContent = cfg.sliderMin === 0 ? '0원 (무상 공급)' : fmt(cfg.sliderMin) + ' (최소)';
+  }
+
+  function setInitialSlider(pack) {
+    const cfg         = PRICING.contentPacks[pack];
+    const packPremium = cfg.value - cfg.discount[cpState.tv];
+    const step        = cfg.sliderStep || 100;
+    const initVal     = Math.max(cfg.sliderMin, Math.floor((packPremium - 900) / step) * step);
+    applySliderConfig(pack);
+    document.getElementById('cp-wholesale').value = initVal;
+  }
+
+  // ===================== 쿠팡: 요금 계산 =====================
+  function getCpPrices() {
+    const pack         = PRICING.contentPacks[cpState.contentPack];
+    const packValue    = pack.value;
+    const packDiscount = pack.discount[cpState.tv];
+    const dispBundled  = cpState.phoneBundle ? PRICING.bundledDiscount : 0;
+    const baselinePrice = PRICING.basePrice[cpState.tv] - dispBundled;
+    const selectedPrice = baselinePrice + packValue - packDiscount;
+    const packPremium   = packValue - packDiscount;
+    return { pack, packValue, packDiscount, dispBundled, baselinePrice, selectedPrice, packPremium };
+  }
+
+  function updateCoupangConfig() {
+    const { pack, packValue, packDiscount, dispBundled, baselinePrice, selectedPrice, packPremium } = getCpPrices();
+
+    const delta    = selectedPrice - baselinePrice;
+    const deltaEl  = document.getElementById('cp-delta-price');
+    deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toLocaleString('ko-KR') + '원';
+    deltaEl.className   = 'ps-val ' + (delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero');
+
+    document.getElementById('cp-ref-price').textContent      = fmt(baselinePrice);
+    document.getElementById('cp-selected-price').textContent = fmt(selectedPrice);
+    document.getElementById('cp-pack-name').textContent      = pack.name;
+    document.getElementById('cp-pack-desc').textContent      = pack.desc;
+    document.getElementById('cp-pack-service').textContent   = pack.service;
+    document.getElementById('cp-pack-target').textContent    = pack.target;
+
+    const refPrice     = PRICING.basePrice[cpState.tv] - (cpState.phoneBundle ? PRICING.bundledDiscount : 0);
+    const finalEl      = document.getElementById('cp-comp-final');
+    finalEl.textContent = fmt(selectedPrice);
+    finalEl.className   = 'comp-val' + (selectedPrice > refPrice ? ' increased' : '');
+
+    document.getElementById('cp-comp-base').textContent     = fmt(baselinePrice);
+    document.getElementById('cp-comp-pack').textContent     = '+' + packValue.toLocaleString('ko-KR') + '원';
+    document.getElementById('cp-comp-discount').textContent = '-' + packDiscount.toLocaleString('ko-KR') + '원';
+    document.getElementById('cp-slider-max-label').textContent = fmt(pack.retailPrice) + ' (소비자가)';
+
+    document.getElementById('bt-list').textContent = fmt(PRICING.listPrice[cpState.tv]);
+
+    const bundledEl = document.getElementById('bt-bundled');
+    bundledEl.textContent = dispBundled > 0 ? '-' + dispBundled.toLocaleString('ko-KR') + '원' : '0원 (미적용)';
+    bundledEl.className   = 'val-cell ' + (dispBundled > 0 ? 'neg' : 'muted');
+
+    document.getElementById('bt-pack-label').textContent = pack.packLabel;
+    const packValTxt = cpState.contentPack === 'sportspass'
+      ? '+' + packValue.toLocaleString('ko-KR') + '원 (와우 7,890원 + 스포츠패스 12,400원)'
+      : '+' + packValue.toLocaleString('ko-KR') + '원';
+    document.getElementById('bt-pack-val').textContent = packValTxt;
+
+    const allianceEl = document.getElementById('bt-alliance');
+    allianceEl.textContent = packDiscount > 0 ? '-' + packDiscount.toLocaleString('ko-KR') + '원' : '없음';
+    allianceEl.className   = 'val-cell ' + (packDiscount > 0 ? 'neg' : 'muted');
+
+    document.getElementById('bt-final').textContent = fmt(selectedPrice);
+
+    document.getElementById('cp-sim-price').textContent    = fmt(selectedPrice);
+    document.getElementById('cp-pack-premium').textContent = fmtSign(packPremium);
+
+    calcCoupang();
+  }
+
+  function calcCoupang() {
+    const { pack, packValue, packDiscount, baselinePrice, selectedPrice, packPremium } = getCpPrices();
+    const wholesale = parseInt(document.getElementById('cp-wholesale').value, 10);
+    const q         = getQcp();
+
+    const extra  = packPremium;
+    const margin = extra - wholesale;
+    const rev    = calcRevenueForms(margin, q);
+
+    document.getElementById('cp-wholesale-value').textContent  = fmt(wholesale);
+    document.getElementById('cp-extra').textContent            = fmtSign(extra);
+    document.getElementById('cp-margin').textContent           = fmtSign(margin);
+    document.getElementById('cp-wholesale-metric').textContent = fmt(wholesale);
+    document.getElementById('cp-annual').textContent           = fmtMag(selectedPrice * q / 2);
+    document.getElementById('cp-q-display').textContent        = fmtQ(q);
+
+    document.getElementById('rev-monthly').textContent = fmtMag(rev.monthly);
+    document.getElementById('rev-annual').textContent  = fmtMag(rev.annual);
+    document.getElementById('rev-3year').textContent   = fmtMag(rev.threeYr);
+
+    document.getElementById('bd-baseline').textContent      = fmt(baselinePrice);
+    document.getElementById('bd-pack-value').textContent    = '+' + packValue.toLocaleString('ko-KR') + '원';
+    document.getElementById('bd-pack-discount').textContent = '-' + packDiscount.toLocaleString('ko-KR') + '원';
+    document.getElementById('bd-final').textContent         = fmt(selectedPrice);
+    document.getElementById('bd-wholesale').textContent     = '-' + wholesale.toLocaleString('ko-KR') + '원';
+    const bdm = document.getElementById('bd-margin');
+    bdm.textContent = fmtSign(margin);
+    bdm.className   = 'row-value ' + (margin >= 900 ? 'positive' : margin > 0 ? 'neutral' : 'negative');
+
+    setAlert('cp-alert', margin);
+
+    const scenarios = PRICING.contentPacks[cpState.contentPack].scenarios;
+    const labels    = scenarios.map(v => v.toLocaleString('ko-KR') + '원' + (v === wholesale ? ' ← 현재' : ''));
+    const values    = scenarios.map(v => extra - v);
+    cpChartInst = refreshChart(cpChartInst, 'cp-chart', labels, values);
+  }
+
+  // ===================== AI =====================
+  function getAiPremium() {
+    if (aiState.phase === '1') {
+      const sum  = AI_PRODS.googleAiPro.customerPrice + AI_PRODS.rwtn.customerPrice;
+      const disc = AI_BUNDLE_DISC;
+      return { keys: ['googleAiPro', 'rwtn'], sum, disc, packPremium: sum - disc };
+    } else {
+      const keys = [];
+      if (aiState.p2Google) keys.push('googleAiPro');
+      if (aiState.p2Claude) keys.push('claude');
+      const sum  = keys.reduce((t, k) => t + AI_PRODS[k].customerPrice, 0);
+      const disc = keys.length >= 2 ? AI_BUNDLE_DISC : 0;
+      return { keys, sum, disc, packPremium: sum - disc };
+    }
+  }
+
+  function selectAIPhase(phase) {
+    aiState.phase = phase;
+    ['1', '2'].forEach(p => document.getElementById('ai-phase-' + p).classList.toggle('active', p === phase));
+    document.getElementById('ai-phase1-content').style.display = phase === '1' ? '' : 'none';
+    document.getElementById('ai-phase2-content').style.display = phase === '2' ? '' : 'none';
+    setAIInitialSlider();
+    updateAIConfig();
+  }
+
+  function toggleAIP2(key, checked) {
+    const count = (aiState.p2Google ? 1 : 0) + (aiState.p2Claude ? 1 : 0);
+    if (!checked && count <= 1) {
+      document.getElementById('ai-p2-' + key).checked = true;
+      return;
+    }
+    if (key === 'google') aiState.p2Google = checked;
+    else                  aiState.p2Claude = checked;
+    setAIInitialSlider();
+    updateAIConfig();
+  }
+
+  function setAIInitialSlider() {
+    const { packPremium } = getAiPremium();
+    const slider = document.getElementById('ai-wholesale');
+    slider.min   = 0;
+    slider.max   = packPremium;
+    slider.step  = 100;
+    slider.value = Math.max(0, Math.floor((packPremium - 900) / 100) * 100);
+    document.getElementById('ai-slider-max-label').textContent = fmt(packPremium) + ' (고객 납부액 기준)';
+  }
+
+  function updateAIConfig() {
+    const { keys, sum, disc, packPremium } = getAiPremium();
+    const basePrice    = getAiBasePrice();
+    const totalPrice   = basePrice + packPremium;
+    const bundleActive = disc > 0;
+    const isP1         = aiState.phase === '1';
+
+    // 인터넷 기본 표시 업데이트
+    document.getElementById('ai-base-internet-note').textContent =
+      isP1 ? '1년약정 · 2030다이렉트 기준' : '3년약정 · VAT포함 · 유무선결합할인';
+    document.getElementById('ai-base-internet-badge').textContent = fmt(basePrice);
+    document.getElementById('ai-base-price-label').textContent =
+      isP1 ? '기본요금 (인터넷+WIFI, 1년약정)' : '기본요금 (인터넷+WIFI, 3년약정)';
+    document.getElementById('ai-base-price-ps').textContent = fmt(basePrice);
+
+    // 파란 요약
+    document.getElementById('ai-selected-sum').textContent = fmt(sum);
+    document.getElementById('ai-total-price').textContent  = fmt(totalPrice);
+    document.getElementById('ai-bundle-row').style.display = bundleActive ? '' : 'none';
+
+    // Phase 2 결합할인 배지
+    if (aiState.phase === '2') {
+      document.getElementById('ai-p2-bundle-badge').style.opacity = bundleActive ? '1' : '0.4';
+      document.getElementById('ai-p2-bundle-icon').textContent    = bundleActive ? '✓' : '○';
+    }
+
+    // 선택된 AI 목록
+    document.getElementById('ai-selected-list').innerHTML = keys.map(k =>
+      `<div class="pack-spec-row">
+        <span class="pack-spec-label">${AI_PRODS[k].name}</span>
+        <span class="pack-spec-val">${fmt(AI_PRODS[k].customerPrice)}<span style="opacity:.6;font-size:10px;"> (소비자가 ${fmt(AI_PRODS[k].retailPrice)})</span></span>
+      </div>`
+    ).join('');
+
+    // 비교 박스 (전체 검정)
+    const termLabel = isP1 ? '1년약정 · 2030다이렉트' : '3년약정';
+    let compHtml = `<div class="comp-row"><span class="comp-label">인터넷 기본 (1G+WIFI, ${termLabel})</span><span class="comp-val">${fmt(basePrice)}</span></div>`;
+    keys.forEach(k => {
+      const aiDisc = AI_PRODS[k].retailPrice - AI_PRODS[k].customerPrice;
+      compHtml += `<div class="comp-row"><span class="comp-label">${AI_PRODS[k].name} (소비자가)</span><span class="comp-val">+${AI_PRODS[k].retailPrice.toLocaleString('ko-KR')}원</span></div>`;
+      compHtml += `<div class="comp-row"><span class="comp-label">${AI_PRODS[k].name} 제휴 할인 (50%)</span><span class="comp-val">-${aiDisc.toLocaleString('ko-KR')}원</span></div>`;
+    });
+    if (bundleActive) compHtml += `<div class="comp-row"><span class="comp-label">(결합 할인) 인터넷 + AI 결합</span><span class="comp-val">-${AI_BUNDLE_DISC.toLocaleString('ko-KR')}원</span></div>`;
+    compHtml += `<div class="comp-row final-row"><span class="comp-label">최종 월 납부액</span><span class="comp-val">${fmt(totalPrice)}</span></div>`;
+    document.getElementById('ai-comp-box').innerHTML = compHtml;
+
+    // 분해 테이블 (+초록 -빨강)
+    const termRow = isP1 ? '기가 인터넷 + GIGA WIFI 7 (1년약정 · 2030다이렉트)' : '기가 인터넷 + GIGA WIFI 7 (3년약정)';
+    let tbHtml = `<tr><td class="label-cell">${termRow}</td><td class="val-cell">${fmt(basePrice)}</td></tr>`;
+    keys.forEach(k => {
+      const aiDisc = AI_PRODS[k].retailPrice - AI_PRODS[k].customerPrice;
+      tbHtml += `<tr><td class="label-cell">${AI_PRODS[k].name} <span style="font-size:10px;font-weight:400;color:var(--body-sub)">(소비자가)</span></td><td class="val-cell pos">+${AI_PRODS[k].retailPrice.toLocaleString('ko-KR')}원</td></tr>`;
+      tbHtml += `<tr><td class="label-cell">${AI_PRODS[k].name} 제휴 할인 <span style="font-size:10px;font-weight:400;color:var(--body-sub)">(50% 할인)</span></td><td class="val-cell neg">-${aiDisc.toLocaleString('ko-KR')}원</td></tr>`;
+    });
+    if (bundleActive) tbHtml += `<tr><td class="label-cell">(결합 할인) 인터넷 + AI 결합 <span style="font-size:10px;font-weight:400;color:var(--success)">${isP1 ? '(2종 자동 적용)' : '(2개 선택)'}</span></td><td class="val-cell neg">-${AI_BUNDLE_DISC.toLocaleString('ko-KR')}원</td></tr>`;
+    tbHtml += `<tr class="final-row"><td class="label-cell">최종 월 납부액</td><td class="val-cell">${fmt(totalPrice)}</td></tr>`;
+    document.getElementById('ai-breakdown-tbody').innerHTML = tbHtml;
+
+    document.getElementById('ai-sim-premium').textContent = fmt(packPremium);
+
+    // 연구독 할인 안내 문구 (Phase별 상이)
+    const noteEl = document.getElementById('ai-discount-note');
+    if (isP1) {
+      noteEl.innerHTML = '<span style="font-weight:700;color:var(--point);">연구독 기준 대비 32% 추가 할인</span> (월 약 12,634원 절감)';
+    } else {
+      noteEl.innerHTML = '<span style="font-weight:700;color:var(--point);">연구독 기준 대비 33% 추가 할인</span> (월 약 19,334원 절감)';
+    }
+
+    calcAI();
+  }
+
+  function calcAI() {
+    const { keys, disc, packPremium } = getAiPremium();
+    const ws         = parseInt(document.getElementById('ai-wholesale').value, 10) || 0;
+    const q          = getQai();
+    const margin     = packPremium - ws;
+    const totalPrice = getAiBasePrice() + packPremium;
+    const rev        = calcRevenueForms(margin, q);
+
+    document.getElementById('ai-wholesale-value').textContent  = fmt(ws);
+    document.getElementById('ai-extra').textContent            = fmt(packPremium);
+    document.getElementById('ai-margin').textContent           = fmtSign(margin);
+    document.getElementById('ai-wholesale-metric').textContent = fmt(ws);
+    document.getElementById('ai-annual').textContent           = fmtMag(totalPrice * q / 2);
+    document.getElementById('ai-q-display').textContent        = fmtQ(q);
+
+    document.getElementById('ai-rev-monthly').textContent = fmtMag(rev.monthly);
+    document.getElementById('ai-rev-annual').textContent  = fmtMag(rev.annual);
+    document.getElementById('ai-rev-3year').textContent   = fmtMag(rev.threeYr);
+
+    let bdHtml = `<div class="row"><span class="row-label">인터넷 기본료 (팩 프리미엄 산정 기준)</span><span class="row-value">${fmt(getAiBasePrice())}</span></div>`;
+    keys.forEach(k => {
+      bdHtml += `<div class="row"><span class="row-label">${AI_PRODS[k].name} 고객 납부액</span><span class="row-value">+${AI_PRODS[k].customerPrice.toLocaleString('ko-KR')}원</span></div>`;
+    });
+    if (disc > 0) bdHtml += `<div class="row"><span class="row-label">(결합 할인) 인터넷 + AI 결합</span><span class="row-value negative">-${disc.toLocaleString('ko-KR')}원</span></div>`;
+    bdHtml += `<div class="row"><span class="row-label">AI 팩 프리미엄 (순 추가 수납)</span><span class="row-value">${fmt(packPremium)}</span></div>`;
+    bdHtml += `<div class="row"><span class="row-label">도매 비용 차감 (협상가)</span><span class="row-value negative">-${ws.toLocaleString('ko-KR')}원</span></div>`;
+    bdHtml += `<div class="row"><span class="row-label">인당 순마진</span><span class="row-value ${margin >= 900 ? 'positive' : margin > 0 ? 'neutral' : 'negative'}">${fmtSign(margin)}</span></div>`;
+    document.getElementById('ai-margin-breakdown').innerHTML = bdHtml;
+
+    setAlert('ai-alert', margin);
+
+    const step    = Math.max(500, Math.round(packPremium / 7 / 500) * 500);
+    const maxPt   = Math.ceil((packPremium + step * 1.5) / step) * step;
+    const pts     = new Set([0, ws, packPremium]);
+    for (let v = step; v <= maxPt; v += step) pts.add(v);
+    const scenarios = [...pts].sort((a, b) => a - b);
+    aiChartInst = refreshChart(aiChartInst, 'ai-chart',
+      scenarios.map(v => v.toLocaleString('ko-KR') + '원' + (v === ws ? ' ← 현재' : '')),
+      scenarios.map(v => packPremium - v));
+  }
+
+  // ===================== ALERT =====================
+  function setAlert(id, margin) {
+    const el = document.getElementById(id);
+    if (margin >= 900) {
+      el.className = 'alert-box alert-ok';
+      el.textContent = '✓ 인당 ' + fmt(margin) + ' 마진 확보 — 안정적 수익 구조입니다.';
+    } else if (margin > 0) {
+      el.className = 'alert-box alert-warn';
+      el.textContent = '⚠ 인당 ' + fmt(margin) + ' 마진 — 수익 여유가 얇습니다. 도매가 인상 시 역마진 리스크.';
+    } else {
+      el.className = 'alert-box alert-ng';
+      el.textContent = '✗ 인당 ' + fmt(Math.abs(margin)) + ' 역마진 — 도매가 인하 또는 팩 할인 조정 필요.';
+    }
+  }
+
+  // ===================== CHART =====================
+  function colorFor(v) { return v >= 900 ? 'rgba(54,23,206,.84)' : v > 0 ? 'rgba(154,170,255,.84)' : 'rgba(226,75,74,.84)'; }
+  function buildChart(id, labels, data) {
+    return new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: data.map(colorFor), borderWidth: 1 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmtSign(c.parsed.y) } } },
+        scales: {
+          x: { ticks: { color: '#666', font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { color: '#666', font: { size: 11 }, callback: v => v.toLocaleString('ko-KR') }, grid: { color: 'rgba(118,113,113,.12)' } }
+        }
+      }
+    });
+  }
+  function refreshChart(inst, id, labels, data) {
+    if (!inst) return buildChart(id, labels, data);
+    inst.data.labels = labels;
+    inst.data.datasets[0].data = data;
+    inst.data.datasets[0].backgroundColor = data.map(colorFor);
+    inst.update();
+    return inst;
+  }
+
+  // ===================== INIT =====================
+  window.onload = function() {
+    setInitialSlider('wowpass');
+    setAIInitialSlider();
+    updateQModule();
+    updateCoupangConfig();
+    updateAIConfig();
+  };
+</script>
+</body>
+</html>
