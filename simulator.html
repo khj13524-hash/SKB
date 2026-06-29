@@ -655,7 +655,7 @@
       <div class="step-header">
         <span class="step-badge">Step 1</span>
         <span class="step-title">AI 상품 구성 선택</span>
-        <span class="step-note">AI 구독 1개 이상 선택 · 2개 이상 시 (결합 할인) 인터넷 + AI 결합 자동 적용</span>
+        <span class="step-note">AI 구독 1개 이상 선택 · 2개 선택시 (결합 할인) 인터넷 + AI 결합 자동 적용</span>
       </div>
 
       <div class="config-grid">
@@ -889,7 +889,7 @@
   };
   const AI_BASE_PRICE_P1 = 34100;  // Phase 1: 1년약정 (2030다이렉트 기준)
   const AI_BASE_PRICE_P2 = 27500;  // Phase 2: 3년약정
-  const AI_BUNDLE_DISC   = 2200;   // (결합 할인) 인터넷 + AI 결합 (AI 2개 이상 선택 시)
+  const AI_BUNDLE_DISC   = 2200;   // (결합 할인) 인터넷 + AI 결합 (AI 2개 선택 시)
 
   function getAiBasePrice() {
     return aiState.phase === '1' ? AI_BASE_PRICE_P1 : AI_BASE_PRICE_P2;
