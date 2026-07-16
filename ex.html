@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SKB 마케팅 컨설팅 지원 보드</title>
+    <style>
+        :root { --skb-red: #E1001A; --bg: #f4f7f6; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 10px solid var(--skb-red); margin-bottom: 25px; }
+        .search-area { display: flex; gap: 10px; margin-top: 15px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 12px 25px; background: var(--skb-red); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 200px; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #333; }
+        .value { color: var(--skb-red); font-weight: bold; font-size: 20px; }
+        .full { grid-column: span 2; background: #fff8f8; border: 1px dashed var(--skb-red); padding: 20px; border-radius: 12px; }
+        .apt-item { font-size: 14px; padding: 5px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>SKB 마케팅 컨설팅 지원 보드</h1>
+        <p>전국 시군구 코드(5자리) 통합 분석 시스템 (개인 노트북 테스트용)</p>
+        <div class="search-area">
+            <input type="text" id="areaInput" placeholder="시군구 코드 5자리를 입력하세요 (예: 강남 11680, 남양주 41360)">
+            <button onclick="analyzeArea()">데이터 분석 시작</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>📊 인구/세대 분석 (행안부)</h3>
+            <p>지역명: <span id="regionName" class="value">-</span></p>
+            <p>총 인구수: <span id="popCount" class="value">-</span> 명</p>
+            <p>총 세대수: <span id="houseCount" class="value">-</span> 세대</p>
+        </div>
+
+        <div class="card">
+            <h3>🏢 공동주택(아파트) 목록 (국토부)</h3>
+            <div id="aptList">코드를 입력하면 해당 지역 아파트 정보가 표시됩니다.</div>
+        </div>
+
+        <div class="full">
+            <h3>💡 마케팅 전략 제안</h3>
+            <div id="strategyText">지역 데이터를 기반으로 최적의 영업 전략을 도출합니다.</div>
+        </div>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+    // API_KEY는 config.js(gitignore 처리됨)에서 로드됩니다.
+
+    async function analyzeArea() {
+        const sggCd = document.getElementById('areaInput').value.trim();
+        if(sggCd.length !== 5) { alert('시군구 코드 5자리를 입력해주세요.'); return; }
+
+        document.getElementById('regionName').innerText = "조회 중...";
+        document.getElementById('aptList').innerHTML = "아파트 정보를 불러오는 중...";
+
+        try {
+            // 1. 인구 데이터 가져오기
+            const popUrl = `https://apis.data.go.kr/1741000/RegistrationPopulationByRegion/getRegistrationPopulationByRegion?serviceKey=${API_KEY}&type=json&pIndex=1&pSize=1&sgg_cd=${sggCd}`;
+            const popRes = await fetch(popUrl);
+            const popData = await popRes.json();
+
+            if(popData.RegistrationPopulationByRegion) {
+                const info = popData.RegistrationPopulationByRegion[1].row[0];
+                document.getElementById('regionName').innerText = info.adm_nm;
+                document.getElementById('popCount').innerText = Number(info.tot_ppltn_cnt).toLocaleString();
+                document.getElementById('houseCount').innerText = Number(info.cnt_nm).toLocaleString();
+                
+                // 마케팅 전략 생성
+                const isBig = Number(info.cnt_nm) > 50000;
+                document.getElementById('strategyText').innerHTML = `<strong>[${info.adm_nm}]</strong> 지역은 ${isBig ? '대단지 밀집 구역' : '중소규모 거주지'}입니다. 기가 와이파이와 Btv All 결합 상품 마케팅을 추천합니다.`;
+            }
+
+            // 2. 공동주택 데이터 가져오기 (이미지에서 본 국토부 API)
+            const aptUrl = `https://apis.data.go.kr/1613000/AptBasisInfoService/getAptBasicInfo?serviceKey=${API_KEY}&sggCd=${sggCd}&numOfRows=5&_type=json`;
+            const aptRes = await fetch(aptUrl);
+            const aptData = await aptRes.json();
+
+            let aptHtml = "";
+            if(aptData.response && aptData.response.body && aptData.response.body.items) {
+                const items = aptData.response.body.items.item;
+                const list = Array.isArray(items) ? items : [items];
+                list.forEach(apt => {
+                    aptHtml += `<div class="apt-item">🏠 ${apt.kaptName} (${apt.kaptAddr})</div>`;
+                });
+                document.getElementById('aptList').innerHTML = aptHtml || "검색된 아파트가 없습니다.";
+            } else {
+                document.getElementById('aptList').innerHTML = "아파트 상세 정보 승인 대기 중이거나 데이터가 없습니다.";
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("데이터를 가져오는 데 실패했습니다. 집 와이파이인지, 키가 정확한지 다시 확인해 주세요!");
+            document.getElementById('regionName').innerText = "오류 발생";
+        }
+    }
+</script>
+
+</body>
+</html>

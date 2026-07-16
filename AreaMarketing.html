@@ -1806,13 +1806,14 @@ body:has(#upload-overlay){overflow:hidden!important;}
     </div>
 </div>
 
+<script src="config.js"></script>
 <script>
 'use strict';
 
 const C  = {skb:'#E1001A',kt:'#002C5F',lgu:'#E6007E',etc:'#6b7280'};
 const NM = {skb:'SK브로드밴드',kt:'KT',lgu:'LG유플러스',etc:'기타'};
 const CENTRAL = ['대전광역시','세종특별자치시','충청북도','충청남도'];
-const API_KEY = '67c347233021e4e7d5ca512543dc8dda2f5f27789c73d19010fd3ff773220d28';
+// API_KEY, KOSIS_KEY는 config.js(gitignore 처리됨)에서 로드됩니다.
 // 시군구별 통합 데이터: cd=시군구코드, cx/cy=중심좌표, r=소상공인API반경(m)
 const REGION_DATA = {
     '대전광역시':{'동구':{cd:'30110',cx:127.4496,cy:36.3498,r:3000},'중구':{cd:'30140',cx:127.4306,cy:36.3226,r:3000},'서구':{cd:'30170',cx:127.3847,cy:36.3530,r:3500},'유성구':{cd:'30200',cx:127.3561,cy:36.3621,r:4000},'대덕구':{cd:'30230',cx:127.4152,cy:36.3803,r:3000}},
@@ -1937,7 +1938,6 @@ function getMS(sido,sg='',dong=''){
 }
 function dom(ms){const max=Math.max(ms.skb,ms.kt,ms.lgu,ms.etc);return max===ms.skb?'skb':max===ms.kt?'kt':max===ms.lgu?'lgu':'etc'}
 // ── KOSIS 통계청 API ──
-const KOSIS_KEY = 'MzdiZGMzMzUwM2EyZmM5OTY4M2E4NGIwZTc0MGM1NGM=';
 const KOSIS_SIDO = {'서울특별시':'11','부산광역시':'26','대구광역시':'27','인천광역시':'28','광주광역시':'29','대전광역시':'30','울산광역시':'31','세종특별자치시':'36','경기도':'41','강원도':'42','충청북도':'43','충청남도':'44','전라북도':'45','전라남도':'46','경상북도':'47','경상남도':'48','제주특별자치도':'50'};
 const _kCache = {};
 
