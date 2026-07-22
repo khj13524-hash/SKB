@@ -1134,7 +1134,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             #panel-field, #panel-product, #panel-consult, #panel-sangkwon,
             .analyze-btn, .hbtn, .sim-btn, .pcat-btn, .sim-ph,
             #sk-env-section, #dongSection, #aptSection,
-            #sgTableSection { display: none !important; }
+            #sgTableSection, #detail-view, #backToSummaryWrap,
+            .no-print { display: none !important; }
+
+            /* ── AI 요약 카드는 인쇄 시 항상 한 페이지로 표시 ── */
+            #ai-summary-card { display: block !important; }
 
             /* ── 기본 설정 ── */
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1263,6 +1267,26 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   align-items:center!important;justify-content:center!important;
   overflow-y:auto!important;
 }
+.pref-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  min-width:104px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--g200);
+  background:#fff;cursor:pointer;font-family:inherit;transition:all .15s ease;
+}
+.pref-btn:hover{border-color:#fca5a5}
+.pref-btn.on{border-color:var(--red);background:#fff0f0;box-shadow:0 3px 10px rgba(225,0,26,.14)}
+.pref-btn .pb-i{font-size:20px;line-height:1}
+.pref-btn .pb-t{font-size:13px;font-weight:800;color:var(--g800);margin-top:3px}
+.pref-btn.on .pb-t{color:var(--red)}
+.pref-btn .pb-s{font-size:10px;color:var(--g600);margin-top:1px}
+.pref-group-label{font-size:11px;font-weight:800;color:var(--g600);letter-spacing:.3px;margin-bottom:9px}
+.rlist-item{padding:11px 16px;font-size:13px;font-weight:600;color:var(--g700);cursor:pointer;border-bottom:1px solid var(--g100);transition:.15s}
+#sidoListCol .rlist-item:last-child,#sgListCol .rlist-item:last-of-type{border-bottom:none}
+.rlist-item:hover{background:#fff5f5}
+.rlist-item.on{background:#fff0f0;color:var(--red);font-weight:800}
+#sidoListCol{background:#fafafa}
+.rlist-more{padding:9px 16px;font-size:12px;color:var(--g600);cursor:pointer;text-align:center;font-weight:700;border-bottom:1px solid var(--g100)}
+.rlist-more:hover{color:var(--red);background:#fff5f5}
+.rlist-empty{padding:16px;font-size:12px;color:var(--g600);text-align:center}
 </style>
 <div id="upload-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:linear-gradient(135deg,#E1001A 0%,#b80015 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-y:auto;padding:24px 16px;box-sizing:border-box">
   <div style="text-align:center;color:white">
@@ -1347,11 +1371,46 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             </div>
             <button class="analyze-btn" id="analyzeBtn" onclick="analyze()" disabled>🔍 분석 시작</button>
         </div>
-        <div class="region-chips" id="quickChips"></div>
+        <div style="display:flex;margin-top:20px;border:1.5px solid var(--g200);border-radius:14px;overflow:hidden;max-width:480px;margin-left:auto;margin-right:auto;background:#fff">
+            <div id="sidoListCol" style="flex:0 0 40%;border-right:1px solid var(--g100);max-height:172px;overflow-y:auto"></div>
+            <div id="sgListCol" style="flex:1;max-height:172px;overflow-y:auto"></div>
+        </div>
+        <div class="ai-pref-row" style="display:flex;justify-content:center;align-items:flex-start;gap:32px;flex-wrap:wrap;margin-top:20px;padding-top:20px;border-top:1px solid var(--g100)">
+            <div style="text-align:center">
+                <div class="pref-group-label">🎯 공략 상품</div>
+                <div style="display:flex;gap:8px">
+                    <button class="pref-btn on" id="prodPref-mass" onclick="setProdPref('mass',this)">
+                        <span class="pb-i">🏢</span><span class="pb-t">Mass</span><span class="pb-s">아파트·가정</span>
+                    </button>
+                    <button class="pref-btn" id="prodPref-soho" onclick="setProdPref('soho',this)">
+                        <span class="pb-i">🏪</span><span class="pb-t">SoHo</span><span class="pb-s">소상공인</span>
+                    </button>
+                </div>
+            </div>
+            <div style="width:1px;align-self:stretch;background:var(--g100);margin-top:26px"></div>
+            <div style="text-align:center">
+                <div class="pref-group-label">🚪 영업 방식</div>
+                <div style="display:flex;gap:8px">
+                    <button class="pref-btn on" id="channelPref-face" onclick="setChannelPref('face',this)">
+                        <span class="pb-i">🤝</span><span class="pb-t">대면</span><span class="pb-s">가판·방판</span>
+                    </button>
+                    <button class="pref-btn" id="channelPref-nonface" onclick="setChannelPref('nonface',this)">
+                        <span class="pb-i">💻</span><span class="pb-t">비대면</span><span class="pb-s">온라인·전단</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ── 분석 결과 ── -->
     <div id="results">
+
+        <!-- ── AI 영업 전략 요약 (V2 신규) ── -->
+        <div id="ai-summary-card" style="display:none"></div>
+        <div style="text-align:center;margin:-4px 0 16px" id="backToSummaryWrap"></div>
+
+        <!-- ── 상세 분석 (기존 대시보드) — 기본 숨김, "상세 보기" 클릭 시 표시 ── -->
+        <div id="detail-view" style="display:none">
 
         <!-- 인쇄 전용 헤더 (화면에선 숨김) -->
         <div id="print-header">
@@ -1474,6 +1533,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             </div>
             <div id="sk-env-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
         </div>
+        </div><!-- /detail-view -->
     </div>
 </div>
 </div><!-- /panel-env -->
@@ -2476,20 +2536,22 @@ function highlightSido(sidoName){
     if(info) map.flyTo([info.lat, info.lng], sidoName==='경기도'?8:sidoName==='강원도'||sidoName==='경상북도'||sidoName==='경상남도'||sidoName==='전라남도'?8:9, {duration:0.8});
 }
 
-// ── 드롭다운 ──
+// ── 드롭다운 + 좌(시도)우(시군구) 목록 ──
+const _quickSido=['대전광역시','세종특별자치시','충청북도','충청남도'];
+const SG_LIST_LIMIT=4;
 function populateSido(){
     const sel = document.getElementById('sidoSel');
     Object.keys(SIDO).forEach(name=>{
         const opt = document.createElement('option');
         opt.value = name; opt.textContent = name; sel.appendChild(opt);
     });
-    // 빠른 선택 칩 (중부 위주)
-    const chips = document.getElementById('quickChips');
-    ['대전광역시','세종특별자치시','충청북도','충청남도','서울특별시','경기도'].forEach(name=>{
-        const c = document.createElement('div');
-        c.className='rchip'; c.textContent=name;
-        c.onclick=()=>{ document.getElementById('sidoSel').value=name; onSidoChange(); };
-        chips.appendChild(c);
+    const col=document.getElementById('sidoListCol');
+    if(!col)return;
+    _quickSido.forEach(name=>{
+        const r=document.createElement('div');
+        r.className='rlist-item'; r.textContent=name;
+        r.onclick=()=>{ document.getElementById('sidoSel').value=name; onSidoChange(); };
+        col.appendChild(r);
     });
 }
 
@@ -2498,10 +2560,43 @@ function onSidoChange(){
     const sgSel = document.getElementById('sgSel');
     sgSel.innerHTML = '<option value="">시/군/구 선택</option>';
     const btn = document.getElementById('analyzeBtn');
-    if(!sido){ sgSel.disabled=true; btn.disabled=true; return; }
+    if(!sido){ sgSel.disabled=true; btn.disabled=true; renderSgList(null); return; }
     SIDO[sido].sg.forEach(sg=>{ const o=document.createElement('option');o.value=sg;o.textContent=sg;sgSel.appendChild(o); });
     sgSel.disabled=false; btn.disabled=false;
-    document.querySelectorAll('.rchip').forEach(c=>c.classList.toggle('on', c.textContent===sido));
+    document.querySelectorAll('#sidoListCol .rlist-item').forEach(r=>r.classList.toggle('on', r.textContent===sido));
+    renderSgList(sido);
+}
+
+function renderSgList(sido, showAll){
+    const col=document.getElementById('sgListCol');
+    if(!col)return;
+    col.innerHTML='';
+    if(!sido||!SIDO[sido]){ col.innerHTML='<div class="rlist-empty">← 시/도를 먼저 선택하세요</div>'; return; }
+    const list=SIDO[sido].sg;
+    const curSg=document.getElementById('sgSel').value;
+    const visible = showAll ? list : list.slice(0, SG_LIST_LIMIT);
+    visible.forEach(sg=>{
+        const r=document.createElement('div');
+        r.className='rlist-item'+(sg===curSg?' on':''); r.textContent=sg;
+        r.onclick=()=>{
+            document.getElementById('sgSel').value=sg;
+            col.querySelectorAll('.rlist-item').forEach(x=>x.classList.toggle('on', x.textContent===sg));
+        };
+        col.appendChild(r);
+    });
+    if(!showAll && list.length>SG_LIST_LIMIT){
+        const more=document.createElement('div');
+        more.className='rlist-more';
+        more.textContent=`▾ ${list.length-SG_LIST_LIMIT}개 더보기`;
+        more.onclick=()=>renderSgList(sido, true);
+        col.appendChild(more);
+    } else if(showAll && list.length>SG_LIST_LIMIT){
+        const less=document.createElement('div');
+        less.className='rlist-more';
+        less.textContent='▴ 접기';
+        less.onclick=()=>renderSgList(sido, false);
+        col.appendChild(less);
+    }
 }
 
 // ── 분석 실행 ──
@@ -2854,29 +2949,154 @@ window.onload = ()=> setTimeout(()=>window.print(), 600);
 </body></html>`;
 }
 
-function analyze(){
-    const sido = document.getElementById('sidoSel').value;
-    const sg   = document.getElementById('sgSel').value;
-    if(!sido) return;
-    curSido=sido; curSG=sg; curDong='';
-    document.getElementById('results').style.display='block';
-    document.querySelector('.search-section').style.marginBottom='24px';
-    // 브라우저가 display:block 레이아웃을 완성한 뒤 지도 크기를 재계산
+// ── AI 영업 전략 요약 (V2 신규 — 지금은 기존 로직으로 임시 대체, 추후 Claude API로 교체 예정) ──
+let userProdPref='mass', userChannelPref='face';
+function setProdPref(val,btn){
+    userProdPref=val;
+    document.querySelectorAll('#prodPref-mass,#prodPref-soho').forEach(b=>b.classList.toggle('on',b===btn));
+    if(curSido&&curSG)buildAiSummaryCard(curSido,curSG);
+}
+function setChannelPref(val,btn){
+    userChannelPref=val;
+    document.querySelectorAll('#channelPref-face,#channelPref-nonface').forEach(b=>b.classList.toggle('on',b===btn));
+    if(curSido&&curSG)buildAiSummaryCard(curSido,curSG);
+}
+function _aiPickProduct(prodPref){
+    if(prodPref==='soho'){
+        const item=(DEFAULT_PRODUCT_DATA.internet||[]).find(d=>d.co==='SKB'&&d.speed==='100M');
+        return {name:'인터넷 단독 100M (소상공인 매장용)',price:item?.price,reason:'매장 운영에 필요한 안정적 회선 + 가장 저렴한 진입 상품'};
+    }
+    const item=(PRODUCT_DATA.bundle||[]).find(d=>d.co==='SKB'&&d.tier==='standard'&&d.speed==='100M');
+    return {name:(item?.alias||'Btv 스탠다드')+' 100M',price:item?.price,reason:'가격 경쟁력 + 가족형 채널 구성으로 무난한 첫 제안 상품'};
+}
+function _aiPickApts(sido,sg){
+    const dongData=REAL_DONG[sido]?.[sg];
+    if(!dongData)return [];
+    const all=[];
+    Object.entries(dongData).forEach(([dong,dv])=>{
+        (dv.apts||[]).forEach(a=>{
+            if(isNanName({name:a.n}))return;
+            const timing=getContractStatus(a.d??2010);
+            const score=calcScore({skb:a.r,units:a.u,yr:a.d,timing});
+            all.push({name:a.n,dong,timing,score});
+        });
+    });
+    return all.sort((x,y)=>y.score-x.score).slice(0,3);
+}
+function _aiPickTactic(channelPref,sido,sg){
+    const dongData=REAL_DONG[sido]?.[sg];
+    let sum=0,cnt=0;
+    if(dongData)Object.values(dongData).forEach(dv=>(dv.apts||[]).forEach(a=>{if(a.u){sum+=a.u;cnt++;}}));
+    const avgUnits=cnt?Math.round(sum/cnt):0;
+    if(channelPref==='face'){
+        return avgUnits>=300
+            ? {t:'방판',d:`대단지(평균 ${avgUnits}세대) 밀집 지역 — 관리사무소 협력을 통한 방문판매가 효율적입니다.`}
+            : {t:'가판',d:'중소규모 단지·상권 혼재 지역 — 유동인구 대상 가판 부스 운영이 효율적입니다.'};
+    }
+    return {t:'온라인',d:'디지털 채널 반응이 예상되는 지역 — SNS·온라인 광고 중심 비대면 전략을 우선 검토하세요.'};
+}
+function showDetailView(){
+    if(!curSido||!curSG)return;
+    document.getElementById('ai-summary-card').style.display='none';
+    document.getElementById('detail-view').style.display='block';
+    document.getElementById('backToSummaryWrap').innerHTML=
+        `<button class="no-print" onclick="showSummaryView()" style="background:none;border:1px solid var(--g200);color:var(--g600);border-radius:7px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">◂ AI 요약으로 돌아가기</button>`;
+    const sido=curSido, sg=curSG;
+    // detail-view가 화면에 표시된 뒤(레이아웃 완성 후) 지도를 그려야 크기가 제대로 계산됨
     requestAnimationFrame(()=>{
         requestAnimationFrame(()=>{
             if(!mapInited){
                 mapInited=true;
                 initMap();
-                // initMap 내부 50ms + 추가 150ms 여유를 두고 invalidateSize → showResults
                 setTimeout(()=>{ map.invalidateSize(false); showResults(sido, sg); }, 200);
             } else {
                 map.invalidateSize(false);
                 showResults(sido, sg);
-                // showResults의 DOM 변경(차트 섹션 표시 등) 이후 한 번 더 재계산
                 setTimeout(() => { if(map) map.invalidateSize(false); }, 250);
             }
         });
     });
+}
+function showSummaryView(){
+    document.getElementById('ai-summary-card').style.display='block';
+    document.getElementById('detail-view').style.display='none';
+    document.getElementById('backToSummaryWrap').innerHTML='';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+function buildAiSummaryCard(sido,sg){
+    const card=document.getElementById('ai-summary-card');
+    if(!card)return;
+    if(!sido||!sg){card.style.display='none';card.innerHTML='';return;}
+    const realRate=REAL_SG[sido]?.[sg]??null;
+    const ms=getMS(sido,sg);
+    const skbRate=realRate??ms.skb;
+    const isReal=realRate!==null;
+    const prod=_aiPickProduct(userProdPref);
+    const tactic=_aiPickTactic(userChannelPref,sido,sg);
+    const apts=userProdPref==='mass'?_aiPickApts(sido,sg):[];
+    const gapText=skbRate<ms.kt?`KT(${ms.kt}%) 대비 낮아 전환 공략이 필요합니다`:'경쟁사 대비 우위를 지키는 관리가 필요합니다';
+    const shareBar=[['SKB',skbRate,'#E1001A',isReal],['KT',ms.kt,'#002C5F',false],['LGU+',ms.lgu,'#E6007E',false],['기타',ms.etc,'#6b7280',false]]
+        .map(([l,p,c,real])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="width:38px;font-size:11px;font-weight:700;color:${c}">${l}</div><div style="flex:1;height:8px;background:var(--g100);border-radius:4px;overflow:hidden"><div style="width:${p}%;height:100%;background:${c}"></div></div><div style="width:70px;font-size:11px;text-align:right;color:${c}">${p}%${real?' <span style=\"color:#16a34a;font-size:9px\">실제</span>':''}</div></div>`).join('');
+    const secondBox=userProdPref==='mass'
+        ? (apts.length
+            ? `<div style="background:#fff;border-radius:9px;padding:12px 14px"><div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">🏢 추천 단지 TOP${apts.length}</div>${apts.map((a,i)=>`<div style="font-size:12px;padding:3px 0">${i+1}. ${a.name} <span style="color:#9ca3af;font-size:11px">(${a.timing.label.replace(/^[🔴🟡⚪]\s*/,'')})</span></div>`).join('')}</div>`
+            : `<div style="background:#fff;border-radius:9px;padding:12px 14px"><div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">🏢 추천 단지</div><div style="font-size:11px;color:var(--g600)">이 지역 아파트 단지 데이터가 아직 없습니다 (엑셀 업로드 또는 동 선택 필요)</div></div>`)
+        : `<div style="background:#fff;border-radius:9px;padding:12px 14px"><div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">🏪 추천 상권</div><div style="font-size:11px;color:var(--g600)">아래 "소상공인 상권 분석" 섹션에서 업종별 상세 데이터를 확인하세요.</div></div>`;
+    const actionPoints=[
+        `${skbRate<ms.kt?'경쟁사 전환 공략':'재약정·업셀링'} 중심 접근 — SKB ${skbRate}%${isReal?'(실제)':'(추정)'} 기준`,
+        `${userProdPref==='mass'?'추천 상품':'SoHo 상품'}: ${prod.name}${prod.price?` (월 ${prod.price.toLocaleString()}원)`:''}`,
+        `영업 방식: ${userChannelPref==='face'?'대면':'비대면'} · ${tactic.t} — ${tactic.d}`
+    ];
+    card.style.display='block';
+    card.innerHTML=`
+    <div class="c-card" id="ai-summary-inner" style="padding:22px 24px;margin-bottom:16px;border:1.5px solid #E1001A;background:linear-gradient(135deg,#fff5f5,#fff)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+            <div style="font-size:16px;font-weight:900;color:#991b1b">🤖 AI 영업 전략 요약 <span style="font-size:10px;font-weight:700;color:#9ca3af;margin-left:6px">(임시 로직 · 추후 AI 연동 예정)</span></div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:11px;color:var(--g600)">${sido} ${sg} · ${userProdPref==='mass'?'Mass 상품':'SoHo 상품'} · ${userChannelPref==='face'?'대면':'비대면'} 영업</span>
+                <button class="no-print" onclick="window.print()" style="padding:5px 12px;border:1px solid var(--g200);border-radius:7px;background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📄 인쇄</button>
+            </div>
+        </div>
+        <div style="padding:10px 14px;background:#fff;border-radius:9px;font-size:13px;line-height:1.7;margin-bottom:14px">
+            📌 이 지역은 SKB 침투율 <strong>${skbRate}%</strong>${isReal?' (실제)':' (추정)'}로 ${gapText}.
+        </div>
+        <div style="background:#fff;border-radius:9px;padding:12px 14px;margin-bottom:14px">
+            <div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:8px">📊 통신사별 점유율 <span style="font-size:10px;font-weight:500;color:#9ca3af">(SKB 외 추정)</span></div>
+            ${shareBar}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div style="background:#fff;border-radius:9px;padding:12px 14px">
+                <div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">🎯 추천 상품</div>
+                <div style="font-size:13px;font-weight:800">${prod.name}${prod.price?` · 월 ${prod.price.toLocaleString()}원`:''}</div>
+                <div style="font-size:11px;color:var(--g600);margin-top:4px">${prod.reason}</div>
+            </div>
+            ${secondBox}
+        </div>
+        <div style="padding:10px 14px;background:#fff;border-radius:9px;font-size:12px;margin-bottom:14px">
+            🚪 추천 영업 방식: <strong>${tactic.t}</strong><br>
+            <span style="color:var(--g600);font-size:11px">${tactic.d}</span>
+        </div>
+        <div style="background:#fff;border-radius:9px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">✅ 핵심 실행 포인트</div>
+            ${actionPoints.map(p=>`<div style="font-size:12px;padding:2px 0">· ${p}</div>`).join('')}
+        </div>
+        <div class="no-print" style="text-align:center;margin-top:14px">
+            <button onclick="showDetailView()" style="background:var(--red);border:none;color:#fff;border-radius:7px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">▾ 상세 데이터 보기 (지도·아파트 목록 등)</button>
+        </div>
+    </div>`;
+}
+
+function analyze(){
+    const sido = document.getElementById('sidoSel').value;
+    const sg   = document.getElementById('sgSel').value;
+    if(!sido) return;
+    curSido=sido; curSG=sg; curDong='';
+    buildAiSummaryCard(sido, sg);
+    document.getElementById('ai-summary-card').style.display='block';
+    document.getElementById('detail-view').style.display='none';
+    document.getElementById('backToSummaryWrap').innerHTML='';
+    document.getElementById('results').style.display='block';
+    document.querySelector('.search-section').style.marginBottom='24px';
 }
 
 function showResults(sido, sg){
@@ -3745,6 +3965,7 @@ function goSG(sido,sg){
 // ── INIT ──
 document.getElementById('hDate').textContent=(()=>{const n=new Date();return n.getFullYear()+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+String(n.getDate()).padStart(2,'0')})();
 populateSido();
+renderSgList(null);
 let mapInited = false;
 
 // ── 추정 시뮬레이션 버튼 핸들러 ──
